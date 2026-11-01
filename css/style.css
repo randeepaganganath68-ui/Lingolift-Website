@@ -29,7 +29,7 @@ img { display: block; max-width: 100%; }
 .site-header { position: relative; z-index: 10; background: rgba(252,253,251,.96); }
 .nav-wrap { width: min(var(--max-width), calc(100% - 96px)); height: 88px; margin: auto; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(37,37,37,.09); }
 .brand { display: inline-flex; align-items: center; gap: 9px; color: var(--green-dark); font-family: var(--display); font-size: 22px; font-weight: 800; letter-spacing: -1.2px; }
-.brand img { width: 34px; height: 34px; }
+.brand img { width: 38px; height: 38px; }
 .brand-dot { color: var(--green); }
 .primary-nav { display: flex; align-items: center; gap: 34px; }
 .primary-nav > a:not(.nav-cta) { position: relative; padding: 10px 0; color: #535950; font-size: 13px; font-weight: 600; transition: color .2s ease; }
@@ -73,7 +73,7 @@ img { display: block; max-width: 100%; }
 .phone-status { margin-bottom: 20px; display: flex; justify-content: space-between; color: #252c27; font-size: 8px; font-weight: 700; }
 .app-top { display: flex; justify-content: space-between; align-items: center; }
 .mini-brand { display: flex; align-items: center; gap: 5px; color: var(--green-dark); font-family: var(--display); font-size: 11px; font-weight: 800; letter-spacing: -.3px; }
-.mini-brand img { width: 20px; height: 20px; }
+.mini-brand img { width: 23px; height: 23px; }
 .profile-dot { width: 23px; height: 23px; display: grid; place-items: center; border-radius: 50%; color: var(--green-dark); background: #eef5eb; font-size: 9px; font-weight: 700; }
 .phone-greeting { margin: 24px 0 0; color: #8b9488; font-size: 10px; }
 .phone-screen h2 { margin: 2px 0 21px; color: #213528; font-family: var(--display); font-size: 19px; font-weight: 700; letter-spacing: -.8px; line-height: 1.3; }

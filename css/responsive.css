@@ -17,7 +17,7 @@
   html { scroll-padding-top: 70px; }
   .nav-wrap { width: calc(100% - 40px); height: 72px; }
   .brand { gap: 7px; font-size: 20px; }
-  .brand img { width: 31px; height: 31px; }
+  .brand img { width: 34px; height: 34px; }
   .menu-toggle { width: 43px; height: 43px; padding: 11px; display: flex; flex-direction: column; justify-content: center; gap: 6px; border: 1px solid #dfe7dd; background: transparent; cursor: pointer; }
   .menu-toggle span { width: 19px; height: 1px; display: block; background: var(--green-dark); transition: transform .2s ease; }
   .menu-toggle[aria-expanded="true"] span:first-child { transform: translateY(3.5px) rotate(45deg); }
