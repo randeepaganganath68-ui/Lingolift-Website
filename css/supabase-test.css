@@ -1,0 +1,15 @@
+.supabase-test-page { min-height: 100vh; padding: 28px; display: grid; place-items: center; background: var(--green-mist); }
+.supabase-test-panel { width: min(100%, 560px); padding: clamp(26px, 6vw, 48px); border: 1px solid var(--line); background: #fff; box-shadow: 0 18px 55px rgba(34, 54, 34, .06); }
+.supabase-test-panel .brand { margin-bottom: 42px; }
+.supabase-test-panel .eyebrow { margin-bottom: 12px; }
+.supabase-test-panel h1 { margin: 0; font-family: var(--display); font-size: clamp(36px, 8vw, 54px); font-weight: 600; letter-spacing: -2.8px; line-height: 1.1; }
+.supabase-test-panel h1 em { color: var(--green); font-style: normal; }
+.supabase-test-description { margin: 18px 0 25px; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.supabase-test-panel button:disabled { cursor: not-allowed; opacity: .65; }
+.supabase-test-status { min-height: 48px; margin: 18px 0 25px; padding: 13px 15px; border-left: 2px solid var(--green); color: #536351; background: var(--green-pale); font-size: 12px; line-height: 1.65; }
+.supabase-test-back { color: var(--green-dark); font-size: 12px; font-weight: 700; }
+
+@media (max-width: 420px) {
+  .supabase-test-page { padding: 16px; }
+  .supabase-test-panel .brand { margin-bottom: 32px; }
+}

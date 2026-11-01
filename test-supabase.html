@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#f7faf6">
+  <title>Supabase Connection Test — Lingolift Development</title>
+  <meta name="description" content="Local development-only Supabase connection check for Lingolift.">
+  <link rel="icon" href="images/lingolift-logo.png" type="image/png">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/supabase-test.css">
+</head>
+<body class="supabase-test-page">
+  <main class="supabase-test-panel">
+    <a class="brand" href="index.html" aria-label="Lingolift home">
+      <img src="images/lingolift-logo.png" alt="" width="34" height="34">
+      <span>lingolift<span class="brand-dot">.</span></span>
+    </a>
+    <p class="eyebrow">LOCAL DEVELOPMENT CHECK</p>
+    <h1>Supabase <em>connection</em></h1>
+    <p class="supabase-test-description">
+      This page checks that the configured Supabase Auth endpoint responds. It does not sign in,
+      create accounts, or change database data.
+    </p>
+    <button class="button button-primary" id="test-connection" type="button">
+      Test connection
+    </button>
+    <p class="supabase-test-status" id="connection-status" role="status" aria-live="polite">
+      Run this check from a local development server.
+    </p>
+    <a class="supabase-test-back" href="index.html">← Back to Lingolift</a>
+  </main>
+  <script type="module" src="js/supabase-connection-test.js"></script>
+</body>
+</html>

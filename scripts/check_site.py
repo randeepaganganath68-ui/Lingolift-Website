@@ -16,10 +16,13 @@ VOID_ELEMENTS = {
     "link", "meta", "param", "source", "track", "wbr",
 }
 ALLOWED_EXTERNAL_HOSTS = {
+    "cdn.jsdelivr.net",
     "fonts.googleapis.com",
     "fonts.gstatic.com",
     "lingolift.example",
+    "zpujapkfegodxxdicwxa.supabase.co",
 }
+ALLOWED_EXTERNAL_MODULE_HOSTS = {"cdn.jsdelivr.net"}
 
 
 class PageParser(HTMLParser):
@@ -163,11 +166,39 @@ def referenced_file(page: Path, value: str) -> tuple[Path | None, str | None]:
     return target, unquote(parsed.fragment) or None
 
 
+def check_external_module_imports() -> tuple[list[str], set[str]]:
+    errors: list[str] = []
+    hosts: set[str] = set()
+    import_pattern = re.compile(
+        r"""(?:\bfrom\s*|\bimport\s*)["'](https?://[^"']+)["']"""
+    )
+
+    for script in ROOT.rglob("*.js"):
+        try:
+            source = script.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as error:
+            errors.append(f"{script.relative_to(ROOT)}: could not read JavaScript ({error})")
+            continue
+
+        for module_url in import_pattern.findall(source):
+            host = (urlsplit(module_url).hostname or "").lower()
+            hosts.add(host)
+            if host not in ALLOWED_EXTERNAL_MODULE_HOSTS:
+                errors.append(
+                    f"{script.relative_to(ROOT)}: unapproved external module host: "
+                    f"{host or '(missing host)'}"
+                )
+
+    return errors, hosts
+
+
 def main() -> int:
     pages = sorted(ROOT.rglob("*.html"))
     errors: list[str] = []
     parsers: dict[Path, PageParser] = {}
     resolved_links: list[tuple[Path, Path, str | None, str]] = []
+    module_errors, module_hosts = check_external_module_imports()
+    errors.extend(module_errors)
 
     for page in pages:
         parser = PageParser(page)
@@ -210,7 +241,10 @@ def main() -> int:
         print(f"Site checks failed: {len(errors)} issue(s) across {len(pages)} HTML page(s).")
         return 1
 
-    hosts = sorted({host for parser in parsers.values() for host in parser.external_hosts})
+    hosts = sorted(
+        {host for parser in parsers.values() for host in parser.external_hosts}
+        | module_hosts
+    )
     print(
         f"Site checks passed: {len(pages)} HTML pages, "
         f"{len(resolved_links)} local navigation links, local resources and fragments."
