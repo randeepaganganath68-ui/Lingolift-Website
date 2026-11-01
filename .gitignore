@@ -1,0 +1,22 @@
+# Dependencies and local build output
+node_modules/
+.vite/
+dist/
+build/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+
+# Deployment metadata
+.vercel/
+.netlify/
+
+# Editor, operating system, and diagnostic files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+*.map

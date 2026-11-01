@@ -4,13 +4,17 @@ const contactForm = document.querySelector("#contact-form");
 
 if (contactForm instanceof HTMLFormElement) {
   const fields = [
-    { name: "name", errorId: "name-error", label: "Your name", validate: (value) => value.trim().length >= 2 },
-    { name: "email", errorId: "email-error", label: "A valid email address", validate: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()) },
-    { name: "subject", errorId: "subject-error", label: "A topic", validate: (value) => value.trim().length > 0 },
-    { name: "message", errorId: "message-error", label: "A message of at least 10 characters", validate: (value) => value.trim().length >= 10 }
+    { name: "name", errorId: "name-error", label: "a name between 2 and 80 characters", validate: (value) => value.trim().length >= 2 && value.trim().length <= 80 },
+    { name: "email", errorId: "email-error", label: "a valid email address of no more than 254 characters", validate: (value) => value.trim().length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()) },
+    { name: "subject", errorId: "subject-error", label: "a topic", validate: (value) => ["question", "feedback", "other"].includes(value) },
+    { name: "message", errorId: "message-error", label: "a message between 10 and 2,000 characters", validate: (value) => value.trim().length >= 10 && value.trim().length <= 2000 }
   ];
 
   const status = document.querySelector("#form-status");
+  const submitButton = contactForm.querySelector('button[type="submit"]');
+  if (!(submitButton instanceof HTMLButtonElement)) {
+    throw new Error("Contact form is missing its submit button.");
+  }
 
   contactForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -54,4 +58,6 @@ if (contactForm instanceof HTMLFormElement) {
       if (error) error.textContent = "";
     });
   });
+
+  submitButton.disabled = false;
 }

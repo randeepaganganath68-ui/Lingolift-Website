@@ -317,7 +317,7 @@ img { display: block; max-width: 100%; }
 .detail-copy h2 { margin: 0 0 19px; font-family: var(--display); font-size: clamp(38px, 4.25vw, 54px); font-weight: 600; letter-spacing: -2.7px; line-height: 1.15; }
 .detail-copy > p { max-width: 430px; margin: 0 0 21px; color: #6d756a; font-size: 13px; line-height: 1.9; }
 .detail-illustration { position: relative; min-height: 310px; display: grid; place-items: center; }
-.path-illustration { position: relative; width: 320px; height: 245px; padding: 26px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+.path-illustration { position: relative; width: min(320px, 100%); height: 245px; padding: 26px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
 .path-illustration::before { position: absolute; top: 23px; bottom: 23px; left: 50%; width: 1px; border-left: 1px dashed #86a67d; content: ""; }
 .path-illustration > span, .path-illustration > i, .path-illustration > b { position: relative; z-index: 1; }
 .path-start, .path-end { padding: 5px 12px; border: 1px solid #c7d7c0; border-radius: 22px; color: var(--green-dark); background: #f9fbf7; font-size: 8px; font-weight: 700; letter-spacing: 1px; }

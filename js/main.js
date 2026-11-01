@@ -41,7 +41,12 @@ document.querySelectorAll("[data-year]").forEach((element) => {
 
 document.querySelectorAll("[data-play-store-link]").forEach((link) => {
   if (PLAY_STORE_URL) {
-    link.setAttribute("href", PLAY_STORE_URL);
+    const storeUrl = new URL(PLAY_STORE_URL);
+    if (storeUrl.protocol !== "https:" || storeUrl.hostname !== "play.google.com" || storeUrl.pathname !== "/store/apps/details" || storeUrl.username || storeUrl.password) {
+      throw new Error("PLAY_STORE_URL must be an official HTTPS Google Play app listing URL.");
+    }
+
+    link.setAttribute("href", storeUrl.href);
     link.removeAttribute("aria-disabled");
     link.setAttribute("target", "_blank");
     link.setAttribute("rel", "noopener noreferrer");

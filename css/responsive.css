@@ -103,7 +103,8 @@
   .philosophy-editorial .section-kicker { margin-bottom: 29px; }
   .philosophy-layout { gap: 28px; }
   .philosophy-point { grid-template-columns: 28px 1fr; gap: 11px; }
-  .feature-detail { min-height: unset; padding: 57px 28px; grid-template-columns: 1fr; gap: 25px; }
+  .feature-detail { min-height: unset; padding: 57px 28px; grid-template-columns: minmax(0, 1fr); gap: 25px; }
+  .feature-detail > * { min-width: 0; }
   .feature-detail:nth-child(even) .detail-illustration { order: 2; }
   .feature-detail:nth-child(even) .detail-copy { order: 1; }
   .feature-detail:nth-child(odd) .detail-copy { order: 1; }
@@ -175,6 +176,11 @@
   .site-footer { padding-right: 21px; padding-left: 21px; }
   .hero-actions { align-items: flex-start; flex-direction: column; gap: 14px; }
   .hero-art { margin-right: -23px; margin-left: -23px; transform: scale(.77); }
+  .word-orbit { width: 225px; height: 225px; }
+  .word-a { left: calc(50% - 34px); }
+  .word-b { right: -3px; }
+  .word-c { left: 50%; transform: translateX(-50%); }
+  .word-d { left: -3px; }
   .feature-row { grid-template-columns: 20px 33px 1fr 18px; gap: 8px; }
   .feature-title { font-size: 12px; }
   .journal-art { height: 220px; }
