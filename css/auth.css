@@ -18,8 +18,17 @@
 .auth-fields input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(22, 131, 75, .1); }
 .auth-fields input:disabled { color: #737c71; background: #fbfcfa; opacity: 1; }
 .auth-fields input::placeholder { color: #9a9f97; }
-.auth-submit { width: 100%; margin-top: 5px; cursor: not-allowed; opacity: .65; }
+.auth-submit { width: 100%; margin-top: 5px; cursor: pointer; }
+.auth-submit:disabled { cursor: not-allowed; opacity: .65; }
 .auth-submit:disabled:hover { transform: none; }
+.auth-fields:disabled { opacity: .72; }
+.auth-notice[data-state="error"] { border-color: #b94a3b; color: #792d24; background: #fff3f0; }
+.auth-notice[data-state="success"] { border-color: var(--green); color: var(--green-dark); background: var(--green-pale); }
+.auth-password-field { position: relative; margin-bottom: 17px; }
+.auth-password-field input { margin-bottom: 0; padding-right: 64px; }
+.auth-password-toggle { position: absolute; top: 0; right: 0; min-width: 57px; height: 47px; padding: 0 9px; border: 0; color: var(--green-dark); background: transparent; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.auth-password-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: -3px; }
+.auth-form > form + .auth-switch { margin-top: 14px; }
 .auth-switch { margin: 19px 0 0; color: var(--muted); font-size: 11px; text-align: center; }
 .auth-art { position: relative; min-height: 440px; padding: 65px 42px; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; isolation: isolate; background: #e6efe2; }
 .auth-art::before { position: absolute; z-index: -1; top: 50%; left: 50%; width: 340px; aspect-ratio: 1; border: 1px solid rgba(22, 131, 75, .16); border-radius: 50%; background: rgba(255,255,255,.25); content: ""; transform: translate(-50%, -57%); }

@@ -1,13 +1,13 @@
 # Lingolift Website Security Audit
 
 **Scope:** Static HTML, CSS, vanilla JavaScript, the contact form, visual assets, SEO resources, Git working tree and available local commit history, dependencies, and deployment/CI files. No external systems were tested.
-**Assessment:** Frontend-only static website; no application server, account system, database, or form-processing endpoint is present.
+**Assessment:** Frontend-only static website with browser-side Supabase Auth; no application server, website database, or form-processing endpoint is present.
 
 ## Summary
 
 No confirmed exploitable XSS, unsafe dynamic HTML, JavaScript evaluation, exposed credentials, unexpected remote scripts loaded by the current pages, iframe embeds, or secret-bearing configuration were found in the reviewed project.
 
-The initial audit's contact form and security-header findings have been hardened in the source/configuration. This follow-up adds repeatable CI checks, a branded not-found page, static sign-up/login page previews, and a reusable Supabase client configuration. The production domain and hosting account are still unknown, so production headers, deployment behavior, Supabase connectivity, and GitHub account-level security settings remain unverified.
+The initial audit's contact form and security-header findings have been hardened in the source/configuration. Follow-up work added repeatable CI checks, a branded not-found page, reusable Supabase client configuration, and website-only Supabase Auth flows. The production domain and hosting account are still unknown, so production headers, deployment behavior, hosted auth redirects, email delivery, and GitHub account-level security settings remain unverified.
 
 ## Findings and changes
 
@@ -24,7 +24,8 @@ The initial audit's contact form and security-header findings have been hardened
 | 9 | Informational | There was no repository-owned not-found page. Host-generated 404 behavior varies. | Added `404.html` with `noindex, follow`. Verify the chosen host serves this page with an actual HTTP 404 response after deployment. |
 | 10 | Informational | Native GitHub Secret Scanning and Push Protection are repository/account settings and cannot be verified from these local files. | Enable/check them in GitHub repository security settings when available. The added Gitleaks workflow is an additional repository check, not proof those GitHub features are enabled. |
 | 11 | Informational | The static site has no build system and cannot load `.env.local` values in browser JavaScript. | Kept `.env.example` as a placeholder reference and configured `js/supabase-client.js` with the project URL and publishable key supplied by the owner. The client imports the version-pinned official Supabase JS package from jsDelivr; CSP permits that CDN and only this project origin for connections. |
-| 12 | Informational | Sign-up and login screens are not connected to authentication. | Added noindex page previews with disabled fields and controls. They do not accept, store, or send credentials; authentication must be implemented separately after project configuration. |
+| 12 | Informational | The static site had no account system. | Implemented website-only Supabase Auth registration, password login, logout, email confirmation redirects, recovery email requests, and password updates using the configured publishable client. The website requires verification before login; confirm that Supabase Auth has **Confirm email** enabled in the Dashboard. No database tables or Android changes were made. |
+| 13 | Informational | Auth redirect allowlists and email delivery are provider-side settings that cannot be changed or verified from static files. | Added fixed same-origin callback URLs and recovery feedback. Configure production/local callback URLs, the Site URL, email provider/templates, and confirmation settings in Supabase; local behavior does not prove email delivery or production setup. |
 
 ## Code review
 
@@ -38,7 +39,10 @@ The initial audit's contact form and security-header findings have been hardened
 - There is no `package.json` or npm lockfile. The project does not declare or require npm runtime dependencies; the untracked `node_modules` directory contains no files. The CI npm audit is conditional on a future `package.json`.
 - `.env.local` is ignored by the existing `.gitignore`; `.env.example` is an intentionally tracked placeholder template and is not loaded by the current static site. The browser client reads its configuration from constants in `js/supabase-client.js`.
 - The Supabase browser client requires an HTTPS Supabase project URL and an `sb_publishable_` key, and rejects other key formats. The shared `supabase` client is initialized once per page module and is reused by imports; the test makes a read-only request to `/auth/v1/settings` only after the user runs it.
-- Login and sign-up pages are `noindex, nofollow` previews, with disabled fields and buttons. They do not submit forms or transmit credentials.
+- Login, sign-up, forgot-password, and reset-password pages are `noindex, nofollow`. Fields stay disabled until the official Supabase client initializes. Passwords are submitted only to Supabase Auth methods; the website does not store passwords.
+- The shared Supabase client enables persistent sessions, automatic token refresh, and URL callback detection. The static client uses Supabase's browser-only implicit flow; signup and recovery use fixed same-origin callback pages, and no user-controlled redirect parameter is used.
+- Auth errors are mapped to fixed application-authored messages, and password-reset responses avoid revealing whether an email address is registered. Session navigation exposes only whether a session exists, not user email or profile data.
+- Signup detects when Supabase returns an active session before email verification and attempts to clear that session, then asks the owner to enable email confirmation. This client behavior does not replace the required Supabase Dashboard setting.
 - No source maps, environment files, private-key files, or credential-named tracked files were found. `.gitignore` excludes environment overrides, dependency/build output, deployment state, and source maps while permitting `.env.example`.
 - Configured third-party requests include Google Fonts and the pinned Supabase JS ESM CDN. Supabase API requests are restricted by CSP to the supplied project origin. The test page is `noindex` and disables its check outside localhost. There are no third-party embedded frames.
 - Repository ignore rules do not prevent someone from manually uploading files to a host. Inspect the final published output, and do not deploy local cache or credentials.
@@ -84,12 +88,14 @@ The repository includes both `vercel.json` and Netlify `_headers` as **alternati
 ## Verification
 
 - Passed `node --check` for all JavaScript files.
-- Parsed all 15 HTML pages and `vercel.json`; checked page structure, titles, descriptions, H1s, duplicate IDs, local image/icon/script/style paths, alt attributes, form methods, inline event handlers, iframe use, internal fragments, and external JS module hosts with `python scripts/check_site.py`.
+- Parsed all 17 HTML pages and `vercel.json`; checked page structure, titles, descriptions, H1s, duplicate IDs, local image/icon/script/style paths, alt attributes, form methods, inline event handlers, iframe use, internal fragments, and external JS module hosts with `python scripts/check_site.py`.
 - Checked all local navigation/article links and referenced local resources; no broken local targets were found.
 - Scanned local commit additions and project files for high-confidence secret patterns with matched values suppressed; no matches. Also ran the pinned Gitleaks CLI v8.30.1 against all six locally available commits and the working tree; no leaks were found. The hosted CI run remains pending.
 - Checked Git tracking and repository files: no package manifest or lockfile, no tracked source maps or credential-named files, and no files in the local `node_modules` folder. `npm audit` was therefore not run locally; CI skips it unless a `package.json` is added.
-- Browser-tested all 15 local pages, including `404.html`, `login.html`, `signup.html`, and `test-supabase.html`, at 320, 375, 768, 1024, and 1440 pixels; all loaded with no horizontal overflow or JavaScript page errors.
-- Sign-up/login previews remain unconnected. The Supabase connection test uses only `/auth/v1/settings`, is guarded to localhost, and does not sign in, create users, or change database contents. A local browser test successfully reached the configured Supabase project; this does not verify deployed CSP headers or production hosting.
+- The original 15-page site was browser-tested at 320, 375, 768, 1024, and 1440 pixels. In the authentication update, login, signup, forgot-password, and reset-password pages were browser-tested at all five widths with no horizontal overflow or JavaScript page errors.
+- Browser-tested auth form validation, password visibility, mismatched-password rejection, the invalid/expired reset-link guard, and the signed-out navigation state. Invalid forms made no POST request.
+- Static checks validate the account pages and JavaScript syntax; no real user was registered and no production login, email delivery, confirmation link, or password-reset link was exercised. Those flows require a real test mailbox and correct Supabase Dashboard configuration.
+- The localhost Supabase connection test still uses only `/auth/v1/settings`, is guarded to localhost, and does not sign in, create users, or change database contents. A prior local connection test reached the configured project; this does not verify deployed CSP headers or production hosting.
 - Browser-tested the mobile menu and the contact form's empty, valid, over-length, and HTML-payload cases. The submitted test payload was not reflected as markup, and the form made no POST request.
 - Tested the proposed CSP as a local `Content-Security-Policy-Report-Only` response header across the 11 content and article pages that existed before `404.html` was added, and separately on the Supabase connection test: zero CSP violations. The test page successfully reached the configured Auth settings endpoint. Report-only testing does not prove that the production host will send the policy or that enforcement is active.
 - Confirmed the Vercel JSON is valid and the Vercel/Netlify security-header sets match. Both HSTS values omit `includeSubDomains`.
@@ -101,6 +107,9 @@ The repository includes both `vercel.json` and Netlify `_headers` as **alternati
 - [ ] Confirm the supplied Supabase URL and publishable key in `js/supabase-client.js` match the intended project; update `connect-src` in both host configurations if the project URL changes.
 - [ ] Keep `.env.local` untracked. Do not put secret/service-role keys in browser code or any publicly deployed file.
 - [ ] Verify `verifySupabaseConnection()` returns successfully in the deployed browser; review Supabase Auth URL/CORS settings if the request fails.
+- [ ] In Supabase Auth URL Configuration, set the production Site URL and allow the exact production callbacks for `login.html?confirmed=1` and `reset-password.html`; allow local development URLs only for development.
+- [ ] Enable **Confirm email** in Supabase Auth settings. Verify the email provider, sender, confirmation template, password-reset template, and redirect destinations with a real test mailbox.
+- [ ] Test signup, confirmation, login, logout, reset-email delivery, expired reset links, and password updates on the deployed HTTPS site with a test account.
 - [ ] Choose the correct provider configuration; do not assume both hosting examples are active.
 - [ ] Verify CSP in report-only mode on staging; then enable and verify enforced CSP.
 - [ ] Check CSP allows only required resources and blocks inline/eval scripts and framing.
@@ -120,4 +129,4 @@ The repository includes both `vercel.json` and Netlify `_headers` as **alternati
 
 ## Limitations
 
-This review covers the files present in this static project and does not certify the hosting account, DNS, TLS configuration, CDN, deployment pipeline, Supabase project policies, third-party font service, or future changes. Publishable keys are intended for browser use, but access is governed by Supabase Auth configuration, Row Level Security, and API policies. Client-side validation is not a security boundary. Security headers are only effective when the selected host serves them in HTTP responses.
+This review covers the files present in this static project and does not certify the hosting account, DNS, TLS configuration, CDN, deployment pipeline, Supabase Auth configuration or project policies, email provider, third-party font service, or future changes. Publishable keys are intended for browser use, but access to future data is governed by Row Level Security and API policies. Client-side validation and session-based UI are not authorization boundaries. Security headers are only effective when the selected host serves them in HTTP responses.

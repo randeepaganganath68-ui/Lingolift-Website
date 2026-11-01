@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Log in — Lingolift</title>
-  <meta name="description" content="Log in to your Lingolift account. Account access is being prepared.">
+  <meta name="description" content="Log in securely to your Lingolift account and continue your English-learning journey.">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#f7faf6">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Log in — Lingolift">
-  <meta property="og:description" content="Your English journey, one step at a time.">
+  <meta property="og:description" content="Log in securely and continue your English-learning journey with Lingolift.">
   <meta property="og:url" content="https://lingolift.example/login.html">
   <meta property="og:image" content="https://lingolift.example/images/og-cover.svg">
   <link rel="canonical" href="https://lingolift.example/login.html">
@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/auth.css">
 </head>
-<body class="auth-page">
+<body class="auth-page" data-auth-page="login">
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="auth-header">
     <a class="brand" href="index.html" aria-label="Lingolift home">
@@ -37,17 +37,23 @@
         <p>Log in to continue your Lingolift learning journey.</p>
       </div>
       <div class="auth-form">
-        <p class="auth-notice" id="auth-notice" role="status">
-          Account access is not connected yet. This preview does not accept or send credentials.
+        <p class="auth-notice" id="auth-status" role="status" aria-live="polite" aria-atomic="true" data-state="info">
+          Connecting to Lingolift account services. Your password is sent only to Supabase Auth.
         </p>
-        <fieldset class="auth-fields" disabled aria-describedby="auth-notice">
-          <legend class="auth-legend">Log in details</legend>
-          <label for="login-email">Email address</label>
-          <input id="login-email" type="email" autocomplete="email" placeholder="you@example.com">
-          <label for="login-password">Password</label>
-          <input id="login-password" type="password" autocomplete="current-password" placeholder="Enter your password">
-          <button class="button button-primary auth-submit" type="button" disabled>Log in <span aria-hidden="true">↗</span></button>
-        </fieldset>
+        <form class="auth-fields" data-auth-form="login" action="login.html" method="post" autocomplete="on" aria-describedby="auth-status">
+          <fieldset class="auth-fields" disabled>
+            <legend class="auth-legend">Log in details</legend>
+            <label for="login-email">Email address</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@example.com">
+            <label for="login-password">Password</label>
+            <div class="auth-password-field">
+              <input id="login-password" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Enter your password">
+              <button class="auth-password-toggle" type="button" data-toggle-password aria-controls="login-password" aria-pressed="false">Show</button>
+            </div>
+            <button class="button button-primary auth-submit" type="submit" disabled>Log in <span aria-hidden="true">↗</span></button>
+          </fieldset>
+        </form>
+        <p class="auth-switch"><a href="forgot-password.html">Forgot your password?</a></p>
         <p class="auth-switch">New to Lingolift? <a href="signup.html">Create your account</a></p>
       </div>
     </section>
@@ -64,5 +70,6 @@
     <span>© <span data-year>2026</span> Lingolift</span>
   </footer>
   <script src="js/main.js" defer></script>
+  <script type="module" src="js/auth.js"></script>
 </body>
 </html>

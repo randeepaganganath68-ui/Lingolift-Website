@@ -41,6 +41,12 @@ img { display: block; max-width: 100%; }
 .nav-cta span { font-size: 15px; }
 .nav-signup { color: var(--green-dark); border: 1px solid #b8cdb5; background: transparent; }
 .nav-signup:hover { color: #fff; border-color: var(--green); background: var(--green); }
+.nav-signout { font-family: inherit; border: 0; cursor: pointer; }
+.nav-signout:disabled { cursor: wait; opacity: .7; }
+.nav-login { padding-right: 6px; padding-left: 6px; color: var(--green-dark); background: transparent; }
+.nav-login:hover { color: var(--green); background: transparent; transform: none; }
+.auth-nav-status { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.primary-nav > [hidden] { display: none !important; }
 .menu-toggle { display: none; }
 
 .hero { position: relative; min-height: 675px; padding: 74px max(48px, calc((100% - var(--max-width))/2)) 80px; display: grid; grid-template-columns: 1.02fr .98fr; align-items: center; overflow: hidden; background: var(--green-mist); }

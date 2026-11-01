@@ -33,7 +33,14 @@ function getValidatedConfig() {
 const config = isConfigured ? getValidatedConfig() : null;
 
 export const supabase = config
-  ? createClient(config.projectUrl, config.publishableKey)
+  ? createClient(config.projectUrl, config.publishableKey, {
+      auth: {
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: "implicit",
+        persistSession: true,
+      },
+    })
   : null;
 
 export async function verifySupabaseConnection() {

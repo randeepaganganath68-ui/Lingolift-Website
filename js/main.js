@@ -6,6 +6,40 @@ const PLAY_STORE_URL = "";
 const menuButton = document.querySelector(".menu-toggle");
 const navigation = document.querySelector(".primary-nav");
 
+const signupLink = navigation?.querySelector(".nav-signup");
+const brandLink = document.querySelector(".brand");
+if (signupLink && brandLink) {
+  const homepageUrl = new URL(brandLink.getAttribute("href"), window.location.href);
+  const loginUrl = new URL("login.html", homepageUrl);
+  if (loginUrl.origin === window.location.origin) {
+    const loginLink = document.createElement("a");
+    loginLink.className = "nav-cta nav-login";
+    loginLink.href = loginUrl.href;
+    loginLink.textContent = "Log in";
+    loginLink.dataset.authLogin = "";
+
+    const logoutButton = document.createElement("button");
+    logoutButton.className = "nav-cta nav-signout";
+    logoutButton.type = "button";
+    logoutButton.textContent = "Log out";
+    logoutButton.dataset.authLogout = "";
+    logoutButton.hidden = true;
+
+    const authNavStatus = document.createElement("span");
+    authNavStatus.className = "auth-nav-status";
+    authNavStatus.setAttribute("role", "status");
+    authNavStatus.setAttribute("aria-live", "polite");
+    authNavStatus.dataset.authNavStatus = "";
+
+    signupLink.after(loginLink);
+    loginLink.after(logoutButton);
+    logoutButton.after(authNavStatus);
+    import("./auth-navigation.js").catch(() => {
+      authNavStatus.textContent = "Account status could not be checked. Sign-in links remain available.";
+    });
+  }
+}
+
 if (menuButton && navigation) {
   const closeMenu = () => {
     menuButton.setAttribute("aria-expanded", "false");
@@ -24,6 +58,7 @@ if (menuButton && navigation) {
 
   navigation.addEventListener("click", (event) => {
     if (event.target instanceof Element && event.target.closest("a")) closeMenu();
+    if (event.target instanceof Element && event.target.closest("[data-auth-logout]")) closeMenu();
   });
 
   document.addEventListener("keydown", (event) => {

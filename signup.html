@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Create an Account — Lingolift</title>
-  <meta name="description" content="Create your Lingolift account and take the next step in your English-learning journey. Account access is being prepared.">
+  <meta name="description" content="Create a Lingolift account and take the next step in your English-learning journey.">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#f7faf6">
   <meta property="og:type" content="website">
@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/auth.css">
 </head>
-<body class="auth-page">
+<body class="auth-page" data-auth-page="signup">
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="auth-header">
     <a class="brand" href="index.html" aria-label="Lingolift home">
@@ -37,19 +37,27 @@
         <p>Create a Lingolift account and keep growing your English with confidence.</p>
       </div>
       <div class="auth-form">
-        <p class="auth-notice" id="auth-notice" role="status">
-          Account creation is not connected yet. This preview does not accept or send credentials.
+        <p class="auth-notice" id="auth-status" role="status" aria-live="polite" aria-atomic="true" data-state="info">
+          Connecting to Lingolift account services. Your password is sent only to Supabase Auth.
         </p>
-        <fieldset class="auth-fields" disabled aria-describedby="auth-notice">
-          <legend class="auth-legend">Account details</legend>
-          <label for="signup-name">Your name</label>
-          <input id="signup-name" type="text" autocomplete="name" placeholder="How should we address you?">
-          <label for="signup-email">Email address</label>
-          <input id="signup-email" type="email" autocomplete="email" placeholder="you@example.com">
-          <label for="signup-password">Create a password</label>
-          <input id="signup-password" type="password" autocomplete="new-password" placeholder="At least 8 characters">
-          <button class="button button-primary auth-submit" type="button" disabled>Create account <span aria-hidden="true">↗</span></button>
-        </fieldset>
+        <form class="auth-fields" data-auth-form="signup" action="signup.html" method="post" autocomplete="on" aria-describedby="auth-status">
+          <fieldset class="auth-fields" disabled>
+            <legend class="auth-legend">Account details</legend>
+            <label for="signup-email">Email address</label>
+            <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@example.com">
+            <label for="signup-password">Create a password</label>
+            <div class="auth-password-field">
+              <input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="At least 8 characters">
+              <button class="auth-password-toggle" type="button" data-toggle-password aria-controls="signup-password" aria-pressed="false">Show</button>
+            </div>
+            <label for="signup-confirm-password">Confirm password</label>
+            <div class="auth-password-field">
+              <input id="signup-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="Enter your password again">
+              <button class="auth-password-toggle" type="button" data-toggle-password aria-controls="signup-confirm-password" aria-pressed="false">Show</button>
+            </div>
+            <button class="button button-primary auth-submit" type="submit" disabled>Create account <span aria-hidden="true">↗</span></button>
+          </fieldset>
+        </form>
         <p class="auth-switch">Already have an account? <a href="login.html">Log in</a></p>
       </div>
     </section>
@@ -66,5 +74,6 @@
     <span>© <span data-year>2026</span> Lingolift</span>
   </footer>
   <script src="js/main.js" defer></script>
+  <script type="module" src="js/auth.js"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@ Lingolift is an official brand and information website for an English-learning A
 
 The website introduces the brand and app, publishes English-learning articles, provides contact-form feedback in the browser, and encourages visitors to find the Android app. It is not a lesson platform or student dashboard.
 
-There is no frontend framework, application build system, server-side application, or declared npm dependency manifest. Supabase is configured for browser-side integration, but authentication and database features have not been implemented.
+There is no frontend framework, application build system, server-side application, or declared npm dependency manifest. Supabase Auth is integrated in the browser for registration, login, logout, email verification, and password recovery. No database tables, learning data, or Android synchronization are implemented.
 
 ## 2. Work completed
 
@@ -16,7 +16,7 @@ There is no frontend framework, application build system, server-side applicatio
 - Added the Lingolift logo supplied for the project and replaced the former leaf mark in the website branding.
 - Created the homepage, About, Features, Blog, Contact, and Download pages.
 - Added five educational articles, a custom 404 page, and search-engine resources.
-- Added Sign up navigation links across the site's shared navigation. The sign-up and login pages are previews only; they do not accept or send credentials.
+- Added Sign up and Log in navigation across the site's shared navigation, with a session-aware logout action.
 
 ### Security improvements
 
@@ -34,21 +34,27 @@ There is no frontend framework, application build system, server-side applicatio
 - Added a localhost-only connection test page. The test makes a read-only request to Supabase Auth settings and does not create users, sign in, or change database contents.
 - Updated the Vercel and Netlify CSP examples to allow the pinned package CDN and the exact configured Supabase project origin.
 - Kept `.env.example` as a placeholder reference. This static site has no build tool, so browser JavaScript cannot read `.env.local`; the existing `.gitignore` already excludes local `.env.*` files.
+- Implemented Supabase Auth sign-up, password login, logout, email-confirmation redirects, password-reset email requests, and password updates using the existing publishable client.
+- Enabled persistent sessions, automatic token refresh, and URL callback detection through the official Supabase client. The client-only static site uses Supabase's browser implicit flow.
+- Added client-side form validation, password visibility controls, accessible request states, and non-enumerating recovery feedback. Passwords are sent only to Supabase Auth and are not saved by the website.
+- Added `forgot-password.html` and `reset-password.html`; all account pages remain `noindex, nofollow`.
 
 ## 3. How the main code works
 
 ### Static pages and styling
 
-Each `.html` file is a page the browser loads directly. The shared `css/style.css` contains the brand styles and reusable components. `css/responsive.css` adapts the main website to smaller screens. The account-preview and connection-test pages use separate stylesheets so their layout can be maintained without changing the existing site design.
+Each `.html` file is a page the browser loads directly. The shared `css/style.css` contains the brand styles and reusable components. `css/responsive.css` adapts the main website to smaller screens. Authentication and connection-test pages use separate stylesheets so their layouts can be maintained without changing the existing site design.
 
 ### Shared JavaScript
 
-- `js/main.js` opens and closes the mobile navigation, updates the displayed year, applies lightweight reveal animations, and validates a configured Google Play URL before enabling its link.
+- `js/main.js` handles the mobile navigation, account-navigation links, displayed year, reveal animations, and Google Play URL validation.
 - `js/contact.js` checks contact-form fields, displays fixed error messages via `textContent`, and focuses the first invalid field. A valid submission only displays a notice; no network request or storage occurs.
+- `js/auth.js` dynamically loads the shared client, handles registration/login/recovery/password updates, displays fixed application-authored messages, and removes auth callback tokens from the URL after processing.
+- `js/auth-navigation.js` shows login/sign-up or logout controls based on the Supabase session without displaying email or profile details.
 
 ### Supabase client
 
-`js/supabase-client.js` imports `createClient` from the official Supabase JavaScript package and creates the exported `supabase` client when that module is imported. JavaScript modules are cached by the browser, so subsequent imports on the same page reuse the module instance. The URL is checked for HTTPS and a Supabase project host; the key must use the publishable-key format.
+`js/supabase-client.js` imports `createClient` from the official Supabase JavaScript package and creates the exported `supabase` client when that module is imported. JavaScript modules are cached by the browser, so subsequent imports on the same page reuse the module instance. The URL is checked for HTTPS and a Supabase project host; the key must use the publishable-key format. Auth persists sessions and detects the browser-only email callback flow.
 
 To use the client in a future page or script:
 
@@ -81,7 +87,8 @@ It supplies the publishable key in the `apikey` request header, aborts after ten
 | `contact.html` | Contact-form validation demo; does not submit data |
 | `download.html` | Android app promotion and illustrative app previews |
 | `articles/*.html` | Five individual SEO-oriented learning articles |
-| `login.html`, `signup.html` | Noindex account-page previews with disabled inputs; no authentication is connected |
+| `login.html`, `signup.html` | Noindex Supabase login and email-verification registration pages |
+| `forgot-password.html`, `reset-password.html` | Noindex password recovery and password update pages |
 | `404.html` | Branded not-found page |
 | `test-supabase.html` | Local development-only Supabase connection check; noindex |
 
@@ -91,9 +98,11 @@ It supplies the publishable key in the `apikey` request header, aborts after ten
 |---|---|
 | `css/style.css` | Shared brand styles and common components |
 | `css/responsive.css` | Responsive rules for the main site |
-| `css/auth.css` | Styles for login and sign-up previews |
+| `css/auth.css` | Styles for account registration, login, and password recovery pages |
 | `css/supabase-test.css` | Styles for the development connection test |
 | `js/main.js` | Navigation, year, animation, and Play Store link behavior |
+| `js/auth.js` | Supabase sign-up, login, email confirmation callback, and password recovery/update |
+| `js/auth-navigation.js` | Shared signed-in/signed-out navigation state and logout action |
 | `js/contact.js` | Contact form client-side validation |
 | `js/supabase-client.js` | Shared Supabase client and connection-check helper |
 | `js/supabase-connection-test.js` | Localhost guard and connection-test UI behavior |
@@ -133,12 +142,14 @@ The project has no `package.json`; do not run `npm install` just to serve the st
 ```powershell
 python scripts/check_site.py
 node --check js/main.js
+node --check js/auth.js
+node --check js/auth-navigation.js
 node --check js/contact.js
 node --check js/supabase-client.js
 node --check js/supabase-connection-test.js
 ```
 
-At the time of this report, the site checker passed on 15 HTML pages and 323 local navigation/resource references. JavaScript syntax checks, Vercel JSON parsing, and `git diff --check` also passed. The connection test was run locally and displayed a successful connection. These checks do not prove that the production deployment sends the configured security headers.
+The latest site-checker run passed on 17 HTML pages and 340 local navigation/resource references. JavaScript syntax checks, Vercel JSON parsing, and `git diff --check` also passed. The connection test was previously run locally and displayed a successful connection. These checks do not prove that the production deployment sends the configured security headers or that email-based auth flows work.
 
 ## 6. Security and deployment notes
 
@@ -148,15 +159,16 @@ At the time of this report, the site checker passed on 15 HTML pages and 323 loc
 - The Vercel and Netlify files are alternatives, not proof either provider is active. Production response headers and 404 routing must be verified after deployment.
 - The canonical URLs, Open Graph URLs, `robots.txt`, and sitemap still contain the placeholder domain `lingolift.example`; replace these with the verified production domain before launch.
 - The connection test is intentionally restricted to localhost and is not included in the sitemap. Do not rely on that check alone to configure production hosting.
-- Authentication, account recovery, shared website/Android sessions, user records, and database access policies are not implemented. Before adding data features, configure Supabase Auth redirect URLs and Row Level Security policies, then test access rules.
-- The login/sign-up pages are inert previews. Their controls remain disabled until a separately scoped authentication implementation is approved.
+- Website authentication is implemented, but real registration, email verification, and recovery depend on correct Supabase Auth URL allowlists, email provider/templates, and email-confirmation settings.
+- The flows have not been tested end-to-end with a real email account; local checks cannot verify inbox delivery, confirmation links, or Dashboard settings.
+- There is no learning progress sync, Android session sharing, database schema, or protected user-data API. Configure and test Row Level Security before adding user-specific data features.
+- Client-side validation and navigation visibility are not authorization controls. Protect all future data access with Supabase policies and server-enforced checks.
 
 ## 7. Remaining work
 
 1. Replace all placeholder canonical and sitemap domains with the actual production domain.
 2. Select the production host and verify CSP and other headers in real HTTP responses.
 3. Keep Supabase Auth redirect and site URL settings aligned with the eventual website domain and Android deep link.
-4. Implement authentication only when requested, using the existing shared client and safe redirect handling.
+4. Configure and test Supabase email confirmation and password recovery templates with the exact website redirect URLs.
 5. Add and test Row Level Security policies before connecting user-specific data.
 6. Confirm the GitHub Actions workflow succeeds on GitHub and enable Secret Scanning/Push Protection in repository settings where available.
-
