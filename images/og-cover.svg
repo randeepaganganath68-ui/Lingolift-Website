@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#F3F6EF"/>
+  <circle cx="930" cy="315" r="245" fill="#E4EDDF"/>
+  <circle cx="930" cy="315" r="198" stroke="#C9DAC3" stroke-width="2"/>
+  <circle cx="930" cy="315" r="153" stroke="#D3E0CE" stroke-width="2"/>
+  <path d="M1023 187C915 189 844 223 823 293c-15 51 17 96 67 96 81 0 134-105 133-202Z" fill="#16834B"/>
+  <path d="M837 370c34-61 78-104 140-140" stroke="white" stroke-linecap="round" stroke-width="13"/>
+  <text x="100" y="214" fill="#14532D" font-family="Arial,sans-serif" font-size="29" font-weight="700" letter-spacing="6">A LITTLE PROGRESS GOES A LONG WAY</text>
+  <text x="96" y="328" fill="#252525" font-family="Arial,sans-serif" font-size="78" font-weight="700" letter-spacing="-4">lingolift</text>
+  <text x="100" y="399" fill="#16834B" font-family="Arial,sans-serif" font-size="36" font-weight="500">Learn English. Grow Your Future.</text>
+</svg>
