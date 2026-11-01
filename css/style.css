@@ -494,6 +494,10 @@ img { display: block; max-width: 100%; }
 .related-links > a:hover > i { transform: translate(3px,-3px); }
 .article-cta { padding-top: 75px; padding-bottom: 79px; }
 .article-cta h2 { font-size: clamp(40px, 4.5vw, 55px); }
+.not-found-section { min-height: 65vh; display: grid; place-items: center; background: #f5f8f2; text-align: center; }
+.not-found-title { margin: 0; font-family: var(--display); font-size: clamp(44px, 6vw, 70px); font-weight: 600; letter-spacing: -4px; line-height: 1.1; }
+.not-found-title em { color: var(--green); font-style: normal; }
+.not-found-copy { max-width: 420px; margin: 20px auto 24px; color: #687066; font-size: 13px; line-height: 1.8; }
 
 .reveal { opacity: 0; transform: translateY(17px); transition: opacity .65s ease, transform .65s cubic-bezier(.2,.7,.25,1); }
 .reveal.is-visible { opacity: 1; transform: translateY(0); }
