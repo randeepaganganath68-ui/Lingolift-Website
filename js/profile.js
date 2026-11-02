@@ -43,6 +43,14 @@ if (
   let previewUrl;
   let currentAvatarUrl;
   let requestInProgress = false;
+  let isOwnedAvatarPath;
+  let getOwnAvatarUrl;
+  let refreshOwnAvatarUrl;
+  let clearOwnAvatarUrl;
+  let getOwnProfile;
+  let setOwnProfile;
+  let clearOwnProfile;
+  let avatarErrorRefreshUsed = false;
 
   function setStatus(message, state = "info") {
     profileStatus.textContent = message;
@@ -52,13 +60,6 @@ if (
   function getUserFullName(user) {
     const fullName = user.user_metadata?.full_name;
     return typeof fullName === "string" ? fullName.trim() : "";
-  }
-
-  function isOwnedAvatarPath(path, userId) {
-    return (
-      typeof path === "string" &&
-      ["jpg", "png", "webp"].some((extension) => path === `${userId}/avatar.${extension}`)
-    );
   }
 
   function setBusy(busy, activeButton, busyLabel) {
@@ -79,9 +80,10 @@ if (
   function displayAvatar(url) {
     currentAvatarUrl = url;
     if (url) {
-      avatarImage.src = url;
+      const isNewUrl = avatarImage.getAttribute("src") !== url;
+      if (isNewUrl) avatarImage.src = url;
       avatarImage.hidden = false;
-      avatarPlaceholder.hidden = true;
+      avatarPlaceholder.hidden = !isNewUrl && avatarImage.complete && avatarImage.naturalWidth > 0;
     } else {
       avatarImage.removeAttribute("src");
       avatarImage.hidden = true;
@@ -96,6 +98,7 @@ if (
           userId: currentUser.id,
           fullName: currentProfile.full_name || "",
           avatarUrl: currentAvatarUrl,
+          avatarPath: currentProfile.avatar_path || null,
         },
       }),
     );
@@ -106,22 +109,28 @@ if (
     if (!isOwnedAvatarPath(path, userId)) {
       throw new Error("The saved profile picture path is invalid.");
     }
-    const { data, error } = await supabaseClient.storage
-      .from("avatars")
-      .createSignedUrl(path, 300);
-    if (error) throw error;
-    return data.signedUrl;
+    return getOwnAvatarUrl(supabaseClient, userId, path);
   }
 
   async function getActiveUser() {
     const { data, error } = await supabaseClient.auth.getUser();
     if (error || !data.user) {
+      const previousUserId = currentUser?.id;
+      currentUser = null;
+      currentProfile = null;
+      clearTemporaryAvatarState();
+      clearOwnProfile(previousUserId);
       setStatus("Your session may have expired. Log in again to manage your profile.", "error");
       profileGate.hidden = false;
       profileContent.hidden = true;
       return null;
     }
     if (currentUser && data.user.id !== currentUser.id) {
+      const previousUserId = currentUser.id;
+      currentUser = null;
+      currentProfile = null;
+      clearTemporaryAvatarState();
+      clearOwnProfile(previousUserId);
       setStatus("Your signed-in account changed. Refresh this page to continue.", "error");
       profileGate.hidden = false;
       profileContent.hidden = true;
@@ -144,6 +153,7 @@ if (
     if (error) return { error };
 
     currentProfile = data;
+    setOwnProfile(supabaseClient, user.id, data);
     return { data };
   }
 
@@ -162,6 +172,18 @@ if (
     uploadButton.disabled = requestInProgress || !selectedAvatar;
   }
 
+  function clearTemporaryAvatarState() {
+    clearOwnAvatarUrl();
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = null;
+    selectedAvatar = null;
+    savedAvatarUrl = null;
+    currentAvatarUrl = null;
+    avatarErrorRefreshUsed = false;
+    avatarFileInput.value = "";
+    displayAvatar(null);
+  }
+
   async function loadProfile() {
     try {
       const { supabase } = await import("./supabase-client.js");
@@ -170,36 +192,83 @@ if (
         return;
       }
       supabaseClient = supabase;
-      supabaseClient.auth.onAuthStateChange((event) => {
-        if (event === "SIGNED_OUT") {
+      ({
+        isOwnedAvatarPath,
+        getOwnAvatarUrl,
+        refreshOwnAvatarUrl,
+        clearOwnAvatarUrl,
+      } = await import("./avatar-signed-url.js"));
+      ({ getOwnProfile, setOwnProfile, clearOwnProfile } = await import("./profile-cache.js"));
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (
+          event === "SIGNED_OUT" ||
+          (currentUser && session?.user?.id !== currentUser.id)
+        ) {
+          const previousUserId = currentUser?.id;
           currentUser = null;
           currentProfile = null;
+          clearTemporaryAvatarState();
+          clearOwnProfile(previousUserId);
           profileContent.hidden = true;
           profileGate.hidden = false;
-          setStatus("You have been signed out. Log in again to manage your profile.", "error");
+          setStatus(
+            event === "SIGNED_OUT"
+              ? "You have been signed out. Log in again to manage your profile."
+              : "Your signed-in account changed. Refresh this page to continue.",
+            "error",
+          );
+        }
+      });
+      document.addEventListener("lingolift:avatar-url-updated", (event) => {
+        const detail = event instanceof CustomEvent ? event.detail : null;
+        if (
+          !detail ||
+          detail.userId !== currentUser?.id ||
+          detail.path !== currentProfile?.avatar_path
+        ) {
+          return;
+        }
+        savedAvatarUrl = detail.url;
+        displayAvatar(detail.url);
+        if (detail.url) {
+          if (
+            profileStatus.textContent ===
+            "Your picture couldn't be refreshed. You can upload it again."
+          ) {
+            setStatus("Your profile is ready.", "success");
+          }
+        } else if (detail.reason === "refresh-failed") {
+          setStatus("Your picture couldn't be refreshed. You can upload it again.", "warning");
         }
       });
       const { data: authData, error: authError } = await supabaseClient.auth.getUser();
       if (authError || !authData.user) {
+        const previousUserId = currentUser?.id;
+        currentUser = null;
+        currentProfile = null;
+        clearTemporaryAvatarState();
+        clearOwnProfile(previousUserId);
         setStatus("Log in to view and manage your profile.", "error");
         profileGate.hidden = false;
         return;
       }
       currentUser = authData.user;
+      const profileUserId = currentUser.id;
 
-      const { data: profile, error } = await supabaseClient
-        .from("profiles")
-        .select("full_name, avatar_path, updated_at")
-        .eq("id", currentUser.id)
-        .maybeSingle();
-      if (error) {
+      let profile;
+      try {
+        profile = await getOwnProfile(supabaseClient, profileUserId);
+      } catch {
+        if (currentUser?.id !== profileUserId) return;
         setStatus("We couldn't load your profile. Check your connection and profile access, then try again.", "error");
         return;
       }
       if (!profile) {
+        if (currentUser?.id !== profileUserId) return;
         setStatus("Your profile record isn't available yet. Please contact the Lingolift website owner.", "error");
         return;
       }
+      if (currentUser?.id !== profileUserId) return;
 
       currentProfile = profile;
       fullNameInput.value =
@@ -212,12 +281,17 @@ if (
       if (profile.avatar_path) {
         try {
           savedAvatarUrl = await getSignedAvatarUrl(profile.avatar_path, currentUser.id);
+          if (currentUser?.id !== profileUserId) return;
+          avatarErrorRefreshUsed = false;
           displayAvatar(savedAvatarUrl);
         } catch {
+          if (currentUser?.id !== profileUserId) return;
           setStatus("Your profile loaded, but its picture couldn't be displayed. You can upload it again.", "warning");
         }
       } else {
         savedAvatarUrl = null;
+        clearOwnAvatarUrl();
+        avatarErrorRefreshUsed = false;
         displayAvatar(null);
       }
       setBusy(false);
@@ -320,6 +394,7 @@ if (
         return;
       }
 
+      avatarErrorRefreshUsed = false;
       clearPreview();
       removeButton.hidden = false;
       let avatarUrl;
@@ -329,6 +404,8 @@ if (
         displayAvatar(avatarUrl);
       } catch {
         savedAvatarUrl = null;
+        avatarErrorRefreshUsed = false;
+        clearOwnAvatarUrl();
         displayAvatar(null);
         setStatus("Your picture was saved, but its preview couldn't be loaded. Refresh the page to try again.", "warning");
       }
@@ -368,6 +445,7 @@ if (
       }
 
       savedAvatarUrl = null;
+      clearOwnAvatarUrl();
       displayAvatar(null);
       removeButton.hidden = true;
       const cleanup = await removeOwnedAvatar(oldPath, user.id);
@@ -390,9 +468,44 @@ if (
       setStatus("We couldn't preview that image. Choose a valid JPEG, PNG or WebP image.", "error");
       return;
     }
+    if (
+      savedAvatarUrl &&
+      avatarImage.src === savedAvatarUrl &&
+      !avatarErrorRefreshUsed &&
+      currentUser &&
+      currentProfile?.avatar_path
+    ) {
+      avatarErrorRefreshUsed = true;
+      savedAvatarUrl = null;
+      displayAvatar(null);
+      const userId = currentUser.id;
+      const path = currentProfile.avatar_path;
+      void refreshOwnAvatarUrl(
+        supabaseClient,
+        userId,
+        path,
+      ).catch(() => {
+        if (currentUser?.id === userId && currentProfile?.avatar_path === path) {
+          setStatus("Your picture couldn't be refreshed. You can upload it again.", "warning");
+        }
+      });
+      return;
+    }
     savedAvatarUrl = null;
+    clearOwnAvatarUrl();
     displayAvatar(null);
     setStatus("Your picture couldn't be displayed. Refresh the page or upload it again.", "warning");
+  });
+
+  avatarImage.addEventListener("load", () => {
+    avatarErrorRefreshUsed = false;
+    if (
+      avatarImage.getAttribute("src") &&
+      avatarImage.complete &&
+      avatarImage.naturalWidth > 0
+    ) {
+      avatarPlaceholder.hidden = true;
+    }
   });
 
   loadProfile();

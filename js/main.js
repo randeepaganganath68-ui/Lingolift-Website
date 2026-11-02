@@ -64,9 +64,15 @@ if (menuButton && navigation) {
     if (event.key === "Escape") closeMenu();
   });
 
-  window.addEventListener("resize", () => {
-    if (window.innerWidth > 760) closeMenu();
-  });
+  const desktopViewport = window.matchMedia("(min-width: 761px)");
+  const closeMenuOnDesktop = (event) => {
+    if (event.matches) closeMenu();
+  };
+  if ("addEventListener" in desktopViewport) {
+    desktopViewport.addEventListener("change", closeMenuOnDesktop);
+  } else {
+    desktopViewport.addListener(closeMenuOnDesktop);
+  }
 }
 
 document.querySelectorAll("[data-year]").forEach((element) => {

@@ -88,10 +88,27 @@ function addProfileControl(mount, profileUrl, logoutButton) {
     avatar.hidden = true;
     initials.hidden = false;
   });
+  avatar.addEventListener("load", () => {
+    if (avatar.getAttribute("src") && avatar.complete && avatar.naturalWidth > 0) {
+      initials.hidden = true;
+    }
+  });
 
   return {
     control,
     logoutButton,
+    avatar,
+    clearAvatar() {
+      avatar.removeAttribute("src");
+      avatar.hidden = true;
+      initials.hidden = false;
+    },
+    renderLoading() {
+      name.textContent = "Loading account…";
+      trigger.setAttribute("aria-label", "Loading account");
+      initials.textContent = "…";
+      this.clearAvatar();
+    },
     render(user, avatarUrl) {
       const fullName = getUserFullName(user) || "My account";
       name.textContent = fullName;
@@ -103,13 +120,15 @@ function addProfileControl(mount, profileUrl, logoutButton) {
         .join("")
         .toUpperCase();
       if (avatarUrl) {
-        avatar.src = avatarUrl;
+        const isNewUrl = avatar.getAttribute("src") !== avatarUrl;
+        if (isNewUrl) {
+          initials.hidden = false;
+          avatar.src = avatarUrl;
+        }
         avatar.hidden = false;
-        initials.hidden = true;
+        if (!isNewUrl) initials.hidden = avatar.complete && avatar.naturalWidth > 0;
       } else {
-        avatar.removeAttribute("src");
-        avatar.hidden = true;
-        initials.hidden = false;
+        this.clearAvatar();
       }
     },
   };
@@ -159,24 +178,38 @@ async function initializeAuthNavigation() {
   logoutButton.dataset.authLogout = "";
   const profileControl = addProfileControl(profileMount, profileUrl, logoutButton);
   let activeUserId = null;
+  let getOwnProfile;
+  let setOwnProfile;
+  let clearOwnProfile;
+  let isOwnedAvatarPath;
+  let activeAvatarPath = null;
+  let activeAvatarUrl = null;
+  let activeHeaderUser = null;
+  let avatarErrorRefreshUsed = false;
+  let getOwnAvatarUrl;
+  let refreshOwnAvatarUrl;
+  let clearOwnAvatarUrl;
   let profileLoadId = 0;
+  let profileLoadingUserId = null;
+  let profileLoadedUserId = null;
 
   function renderProfile(user, avatarUrl = null) {
+    activeAvatarUrl = avatarUrl;
+    activeHeaderUser = user;
     profileControl.render(user, avatarUrl);
   }
 
   async function loadProfile(user, requestId) {
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("full_name, avatar_path")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (requestId !== profileLoadId || user.id !== activeUserId) return;
-
-    if (error) {
-      authNavStatus.textContent = "Your profile details could not be loaded.";
-      return;
+    let profile;
+    try {
+      profile = await getOwnProfile(supabase, user.id);
+    } catch {
+      if (requestId === profileLoadId && user.id === activeUserId && authNavStatus) {
+        authNavStatus.textContent = "Your profile details could not be loaded.";
+      }
+      return false;
     }
+    if (requestId !== profileLoadId || user.id !== activeUserId) return;
 
     const fullName =
       (typeof profile?.full_name === "string" ? profile.full_name.trim() : "") ||
@@ -185,23 +218,21 @@ async function initializeAuthNavigation() {
       ...user,
       user_metadata: { ...user.user_metadata, full_name: fullName },
     };
+    activeAvatarPath = profile?.avatar_path || null;
     renderProfile(headerUser);
 
-    const avatarPath = profile?.avatar_path;
-    const allowedAvatarPaths = ["jpg", "png", "webp"].map(
-      (extension) => `${user.id}/avatar.${extension}`,
-    );
-    if (!allowedAvatarPaths.includes(avatarPath)) return;
+    if (!isOwnedAvatarPath(activeAvatarPath, user.id)) return true;
 
-    const { data: signed, error: signedError } = await supabase.storage
-      .from("avatars")
-      .createSignedUrl(avatarPath, 300);
-    if (requestId !== profileLoadId || user.id !== activeUserId) return;
-    if (signedError) {
-      authNavStatus.textContent = "Your profile picture could not be loaded.";
-      return;
+    try {
+      const signedUrl = await getOwnAvatarUrl(supabase, user.id, activeAvatarPath);
+      if (requestId !== profileLoadId || user.id !== activeUserId) return;
+      renderProfile(headerUser, signedUrl);
+    } catch {
+      if (requestId === profileLoadId && user.id === activeUserId && authNavStatus) {
+        authNavStatus.textContent = "Your profile picture could not be loaded.";
+      }
     }
-    renderProfile(headerUser, signed.signedUrl);
+    return true;
   }
 
   function renderSession(session) {
@@ -218,26 +249,149 @@ async function initializeAuthNavigation() {
 
     profileControl.control.hidden = !isAuthenticated;
     logoutButton.hidden = !isAuthenticated;
-    activeUserId = user?.id ?? null;
+    const nextUserId = user?.id ?? null;
+    const previousUserId = activeUserId;
+    const userChanged = nextUserId !== activeUserId;
+    if (userChanged) {
+      if (previousUserId) {
+        clearOwnAvatarUrl();
+        clearOwnProfile(previousUserId);
+      }
+      activeAvatarPath = null;
+      activeAvatarUrl = null;
+      activeHeaderUser = null;
+      avatarErrorRefreshUsed = false;
+      profileLoadedUserId = null;
+      profileLoadingUserId = null;
+      profileControl.clearAvatar();
+    }
+    activeUserId = nextUserId;
+    if (
+      user &&
+      !userChanged &&
+      (profileLoadedUserId === user.id || profileLoadingUserId === user.id)
+    ) {
+      return;
+    }
     const requestId = ++profileLoadId;
     if (user) {
-      const fallbackUser = {
-        ...user,
-        user_metadata: {
-          ...user.user_metadata,
-          full_name: getUserFullName(user) || "My account",
-        },
-      };
-      renderProfile(fallbackUser);
-      void loadProfile(user, requestId).catch(() => {
-        if (requestId === profileLoadId) {
-          authNavStatus.textContent = "Your profile details could not be loaded.";
-        }
-      });
-    } else if (authNavStatus) {
-      authNavStatus.textContent = "";
+      profileControl.renderLoading();
+      profileLoadingUserId = user.id;
+      void loadProfile(user, requestId)
+        .catch(() => false)
+        .then((loaded) => {
+          if (loaded && requestId === profileLoadId && user.id === activeUserId) {
+            profileLoadedUserId = user.id;
+          }
+        })
+        .catch(() => {
+          if (requestId === profileLoadId && authNavStatus) {
+            authNavStatus.textContent = "Your profile details could not be loaded.";
+          }
+        })
+        .finally(() => {
+          if (requestId === profileLoadId && profileLoadingUserId === user.id) {
+            profileLoadingUserId = null;
+          }
+          if (
+            requestId === profileLoadId &&
+            user.id === activeUserId &&
+            activeHeaderUser === null
+          ) {
+            const fallbackUser = {
+              ...user,
+              user_metadata: { ...user.user_metadata, full_name: "My account" },
+            };
+            renderProfile(fallbackUser);
+          }
+        });
+    } else {
+      activeAvatarPath = null;
+      activeAvatarUrl = null;
+      activeHeaderUser = null;
+      profileControl.clearAvatar();
+      if (authNavStatus) authNavStatus.textContent = "";
     }
   }
+
+  ({
+    isOwnedAvatarPath,
+    getOwnAvatarUrl,
+    refreshOwnAvatarUrl,
+    clearOwnAvatarUrl,
+  } = await import("./avatar-signed-url.js"));
+  ({ getOwnProfile, setOwnProfile, clearOwnProfile } = await import("./profile-cache.js"));
+  document.addEventListener("lingolift:avatar-url-updated", (event) => {
+    const detail = event instanceof CustomEvent ? event.detail : null;
+    if (
+      !detail ||
+      detail.userId !== activeUserId ||
+      detail.path !== activeAvatarPath ||
+      !activeHeaderUser
+    ) {
+      return;
+    }
+    renderProfile(activeHeaderUser, detail.url);
+    if (authNavStatus) {
+      if (!detail.url && detail.reason === "refresh-failed") {
+        authNavStatus.textContent = "Your profile picture could not be refreshed.";
+      } else if (
+        detail.url &&
+        authNavStatus.textContent === "Your profile picture could not be refreshed."
+      ) {
+        authNavStatus.textContent = "";
+      }
+    }
+  });
+  profileControl.avatar.addEventListener("load", () => {
+    avatarErrorRefreshUsed = false;
+  });
+  profileControl.avatar.addEventListener("error", () => {
+    if (
+      !activeAvatarUrl ||
+      profileControl.avatar.src !== activeAvatarUrl ||
+      !activeUserId ||
+      !isOwnedAvatarPath(activeAvatarPath, activeUserId)
+    ) {
+      return;
+    }
+    const userId = activeUserId;
+    const path = activeAvatarPath;
+    renderProfile(activeHeaderUser);
+    if (avatarErrorRefreshUsed) {
+      clearOwnAvatarUrl();
+      return;
+    }
+    avatarErrorRefreshUsed = true;
+    void refreshOwnAvatarUrl(supabase, userId, path).catch(() => {
+      if (
+        authNavStatus &&
+        activeUserId === userId &&
+        activeAvatarPath === path
+      ) {
+        authNavStatus.textContent = "Your profile picture could not be refreshed.";
+      }
+    });
+  });
+  document.addEventListener("lingolift:profile-updated", (event) => {
+    const detail = event instanceof CustomEvent ? event.detail : null;
+    if (!detail || detail.userId !== activeUserId) return;
+    const user = {
+      id: activeUserId,
+      user_metadata: { full_name: detail.fullName },
+    };
+    const updatedAvatarPath = isOwnedAvatarPath(detail.avatarPath, activeUserId)
+      ? detail.avatarPath
+      : null;
+    setOwnProfile(supabase, activeUserId, {
+      full_name: detail.fullName,
+      avatar_path: updatedAvatarPath,
+      updated_at: new Date().toISOString(),
+    });
+    if (updatedAvatarPath !== activeAvatarPath) avatarErrorRefreshUsed = false;
+    activeAvatarPath = updatedAvatarPath;
+    renderProfile(user, activeAvatarPath ? detail.avatarUrl || null : null);
+  });
 
   supabase.auth.onAuthStateChange((_event, session) => renderSession(session));
   const { data, error } = await supabase.auth.getSession();
@@ -272,15 +426,6 @@ async function initializeAuthNavigation() {
     }
   });
 
-  document.addEventListener("lingolift:profile-updated", (event) => {
-    const detail = event instanceof CustomEvent ? event.detail : null;
-    if (!detail || detail.userId !== activeUserId) return;
-    const user = {
-      id: activeUserId,
-      user_metadata: { full_name: detail.fullName },
-    };
-    renderProfile(user, detail.avatarUrl || null);
-  });
 }
 
 initializeAuthNavigation().catch(() => {
