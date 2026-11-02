@@ -67,4 +67,4 @@ jobs:
           tar -xzf gitleaks.tar.gz gitleaks
 
       - name: Scan full Git history for secrets
-        run: ./gitleaks git --log-opts="--all" --redact --no-banner --exit-code 1 .
+        run: ./gitleaks git --config=.gitleaks.toml --log-opts="--all" --redact --no-banner --exit-code 1 .

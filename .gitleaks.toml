@@ -1,0 +1,9 @@
+title = "Lingolift Gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Supabase publishable keys are intended for client-side use."
+regexTarget = "secret"
+regexes = ['''^sb_publishable_[A-Za-z0-9_-]{20,}$''']
