@@ -61,6 +61,9 @@ if (authForm) {
     history.replaceState(history.state, "", cleanUrl.href);
   }
 
+  const duplicateSignupMessage =
+    "We couldn't complete signup for this email. If you already have an account, log in or use Forgot your password. If not, wait a little while and try again.";
+
   function authErrorMessage(error, action) {
     const code = error && typeof error.code === "string" ? error.code : "";
     const message =
@@ -79,8 +82,20 @@ if (authForm) {
     if (code === "same_password") {
       return "Choose a password different from your current password.";
     }
-    if (code === "over_email_send_rate_limit" || code === "over_request_rate_limit") {
-      return "Too many requests were made. Please wait a little while and try again.";
+    if (
+      code === "over_email_send_rate_limit" ||
+      code === "over_daily_send_email_limit" ||
+      code === "over_request_rate_limit"
+    ) {
+      return action === "signup"
+        ? "Signup or verification emails are temporarily rate-limited. Please wait before trying again. If you already have an account, log in or use Forgot your password."
+        : "Too many requests were made. Please wait a little while and try again.";
+    }
+    if (action === "signup" && (code === "email_exists" || code === "user_already_exists")) {
+      return duplicateSignupMessage;
+    }
+    if (action === "signup" && (code === "signup_disabled" || code === "email_provider_disabled")) {
+      return "Email signup is temporarily unavailable. Please try again later or contact Lingolift support.";
     }
     if (code === "otp_expired" || code === "token_expired" || code === "access_denied") {
       return "This link is invalid or has expired. Request a new email and try again.";
@@ -149,6 +164,8 @@ if (authForm) {
         });
         if (error) {
           setStatus(authErrorMessage(error, "signup"), "error");
+        } else if (Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
+          setStatus(duplicateSignupMessage, "error");
         } else if (data.session) {
           const { error: signOutError } = await supabaseClient.auth.signOut();
           setStatus(
