@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+
+/.github/
+/.git/
+/supabase/
+/node_modules/
+
+/PROJECT_REPORT.md
+/SECURITY_AUDIT.md
+/README.md
+
+/wrangler.jsonc
+/vercel.json
