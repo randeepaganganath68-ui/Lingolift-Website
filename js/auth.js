@@ -44,9 +44,14 @@ if (authForm) {
 
   function removeAuthCallbackParameters() {
     const currentUrl = new URL(window.location.href);
+    const callbackParams = new URLSearchParams(
+      `${currentUrl.search.slice(1)}&${currentUrl.hash.slice(1)}`,
+    );
     const containsAuthData =
       currentUrl.searchParams.has("code") ||
-      /(?:access_token|refresh_token|error_description)=/.test(currentUrl.hash);
+      ["access_token", "refresh_token", "error", "error_code", "error_description"].some(
+        (parameter) => callbackParams.has(parameter),
+      );
     if (!containsAuthData) return;
 
     const cleanUrl = new URL(currentUrl.pathname, currentUrl.origin);
@@ -58,7 +63,14 @@ if (authForm) {
 
   function authErrorMessage(error, action) {
     const code = error && typeof error.code === "string" ? error.code : "";
-    if (code === "invalid_credentials" || code === "email_not_confirmed") {
+    const message =
+      error && typeof error.message === "string" ? error.message.trim().toLowerCase() : "";
+    if (
+      code === "invalid_credentials" ||
+      code === "email_not_confirmed" ||
+      message === "invalid login credentials" ||
+      message === "email not confirmed"
+    ) {
       return "Those sign-in details could not be verified. Check your email and password, and verify your email if you just registered.";
     }
     if (code === "weak_password") {
@@ -203,7 +215,11 @@ if (authForm) {
         return;
       }
       supabaseClient = supabase;
+      const callbackParams = new URLSearchParams(
+        `${window.location.search.slice(1)}&${window.location.hash.slice(1)}`,
+      );
       if (authPage === "reset") {
+        recoverySessionDetected = callbackParams.get("type") === "recovery";
         supabaseClient.auth.onAuthStateChange((event, session) => {
           if (event === "PASSWORD_RECOVERY" && session) {
             recoverySessionDetected = true;
@@ -219,6 +235,13 @@ if (authForm) {
         setStatus("We couldn't check your account session. Refresh the page and try again.", "error");
         return;
       }
+      if (callbackParams.has("error") || callbackParams.has("error_code")) {
+        setStatus(
+          "This email link is invalid or has expired. Request a new email and try again.",
+          "error",
+        );
+        return;
+      }
 
       if (authPage === "reset") {
         if (!data.session || !recoverySessionDetected) {
@@ -230,12 +253,13 @@ if (authForm) {
       } else {
         setFormReady(true);
         if (confirmationComplete) {
-          setStatus(
-            data.session
-              ? "Your email has been verified and your session is active. Continue to Lingolift from the home page."
-              : "Your email has been verified. You can now log in.",
-            "success",
-          );
+          const emailVerified = Boolean(data.session?.user.email_confirmed_at);
+          const confirmationMessage = emailVerified
+            ? "Your email has been verified and your session is active. Continue to Lingolift from the home page."
+            : data.session
+              ? "You have returned from the email verification link with an active session. If your email is not verified, check your inbox."
+              : "You have returned from the email verification link. If it was valid, you can now log in.";
+          setStatus(confirmationMessage, "success");
         } else if (authPage === "login" && data.session) {
           setStatus("You are already logged in. Continue to Lingolift from the home page.", "info");
         } else if (authPage === "signup") {

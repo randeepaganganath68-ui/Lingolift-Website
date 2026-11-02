@@ -37,6 +37,9 @@ There is no frontend framework, application build system, server-side applicatio
 - Implemented Supabase Auth sign-up, password login, logout, email-confirmation redirects, password-reset email requests, and password updates using the existing publishable client.
 - Enabled persistent sessions, automatic token refresh, and URL callback detection through the official Supabase client. The client-only static site uses Supabase's browser implicit flow.
 - Added client-side form validation, password visibility controls, accessible request states, and non-enumerating recovery feedback. Passwords are sent only to Supabase Auth and are not saved by the website.
+- Hardened callback handling for query-string and URL-fragment errors, and only enable password reset after a recovery callback and session are detected.
+- Kept sign-in and duplicate-registration failures generic; known invalid-credential responses are mapped to safe guidance rather than displaying Supabase error text.
+- Logout calls `signOut()`, immediately updates the navigation after success, and redirects to the public homepage.
 - Added `forgot-password.html` and `reset-password.html`; all account pages remain `noindex, nofollow`.
 
 ## 3. How the main code works
@@ -49,8 +52,9 @@ Each `.html` file is a page the browser loads directly. The shared `css/style.cs
 
 - `js/main.js` handles the mobile navigation, account-navigation links, displayed year, reveal animations, and Google Play URL validation.
 - `js/contact.js` checks contact-form fields, displays fixed error messages via `textContent`, and focuses the first invalid field. A valid submission only displays a notice; no network request or storage occurs.
-- `js/auth.js` dynamically loads the shared client, handles registration/login/recovery/password updates, displays fixed application-authored messages, and removes auth callback tokens from the URL after processing.
+- `js/auth.js` dynamically loads the shared client, handles registration/login/recovery/password updates, displays fixed application-authored messages, and removes callback tokens or errors from the URL after processing. Reset forms require a recovery callback and active session; verification messaging checks the active user's `email_confirmed_at` when available.
 - `js/auth-navigation.js` shows login/sign-up or logout controls based on the Supabase session without displaying email or profile details.
+- `js/auth-navigation.js` also clears the session through Supabase and redirects to the public homepage after successful logout.
 
 ### Supabase client
 
@@ -149,7 +153,9 @@ node --check js/supabase-client.js
 node --check js/supabase-connection-test.js
 ```
 
-The latest site-checker run passed on 17 HTML pages and 340 local navigation/resource references. JavaScript syntax checks, Vercel JSON parsing, and `git diff --check` also passed. The connection test was previously run locally and displayed a successful connection. These checks do not prove that the production deployment sends the configured security headers or that email-based auth flows work.
+The latest site-checker run passed on 17 HTML pages and 340 local navigation/resource references. JavaScript syntax checks for the auth modules and Supabase client, and `git diff --check`, also passed. Browser checks using mocked Auth responses exercised signup and duplicate-registration handling, login failure handling, recovery requests, password updates, verification callback messaging, session persistence/navigation, and logout. These mocked checks verify client requests and UI behavior, not real account changes or email delivery.
+
+The configured Supabase Auth settings endpoint returned HTTP 200 during verification. Its public settings reported email sign-in enabled, signups enabled, and email autoconfirm disabled. This confirms those project settings at the time checked, but does not confirm production email delivery, redirect allowlists, or successful real-user authentication.
 
 ## 6. Security and deployment notes
 
@@ -159,8 +165,8 @@ The latest site-checker run passed on 17 HTML pages and 340 local navigation/res
 - The Vercel and Netlify files are alternatives, not proof either provider is active. Production response headers and 404 routing must be verified after deployment.
 - The canonical URLs, Open Graph URLs, `robots.txt`, and sitemap still contain the placeholder domain `lingolift.example`; replace these with the verified production domain before launch.
 - The connection test is intentionally restricted to localhost and is not included in the sitemap. Do not rely on that check alone to configure production hosting.
-- Website authentication is implemented, but real registration, email verification, and recovery depend on correct Supabase Auth URL allowlists, email provider/templates, and email-confirmation settings.
-- The flows have not been tested end-to-end with a real email account; local checks cannot verify inbox delivery, confirmation links, or Dashboard settings.
+- Website authentication uses Supabase Auth and the browser publishable key. Real registration, email verification, and recovery still depend on the deployed Site URL, allowed callback URLs, and configured email provider/templates. Email autoconfirm was reported disabled by the public settings endpoint during the latest check.
+- Auth flows have not been tested end-to-end with a real email account. Mocked browser responses and public Auth settings checks cannot verify inbox delivery, real confirmation links, or password changes on a real account.
 - There is no learning progress sync, Android session sharing, database schema, or protected user-data API. Configure and test Row Level Security before adding user-specific data features.
 - Client-side validation and navigation visibility are not authorization controls. Protect all future data access with Supabase policies and server-enforced checks.
 

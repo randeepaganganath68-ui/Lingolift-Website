@@ -5,9 +5,10 @@ const signupLink = navigation?.querySelector(".nav-signup");
 const loginLink = navigation?.querySelector("[data-auth-login]");
 const logoutButton = navigation?.querySelector("[data-auth-logout]");
 const authNavStatus = navigation?.querySelector("[data-auth-nav-status]");
+const brandLink = document.querySelector(".brand");
 
 async function initializeAuthNavigation() {
-  if (!navigation || !signupLink || !loginLink || !logoutButton || !authNavStatus) return;
+  if (!navigation || !signupLink || !loginLink || !logoutButton || !authNavStatus || !brandLink) return;
 
   const { supabase } = await import("./supabase-client.js");
   if (!supabase) {
@@ -42,6 +43,8 @@ async function initializeAuthNavigation() {
       }
       authNavStatus.textContent = "You have been logged out.";
       renderSession(null);
+      const homepageUrl = new URL(brandLink.getAttribute("href"), window.location.href);
+      window.location.replace(homepageUrl.href);
     } catch {
       authNavStatus.textContent = "We couldn't log you out. Check your connection and try again.";
     } finally {
