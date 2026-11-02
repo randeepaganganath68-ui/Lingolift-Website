@@ -27,6 +27,11 @@
   .primary-nav > a:not(.nav-cta) { padding: 13px 2px; border-bottom: 1px solid #edf0ea; font-size: 13px; }
   .primary-nav > a:not(.nav-cta)::after { display: none; }
   .nav-cta { margin-top: 15px; justify-content: space-between; }
+  .primary-nav .nav-profile { width: 100%; margin-top: 15px; }
+  .primary-nav .nav-profile-trigger { width: 100%; justify-content: flex-start; }
+  .primary-nav .nav-profile-menu { position: static; margin-top: 7px; box-shadow: none; }
+  .auth-account-nav { gap: 8px; }
+  .auth-account-nav .nav-profile-name { max-width: 84px; }
   .hero { min-height: unset; padding: 70px 28px 42px; grid-template-columns: 1fr; gap: 13px; }
   .hero-copy { padding: 0; }
   .eyebrow { margin-bottom: 18px; font-size: 9px; }

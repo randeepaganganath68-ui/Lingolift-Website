@@ -9,14 +9,19 @@
   <meta name="description" content="Local development-only Supabase connection check for Lingolift.">
   <link rel="icon" href="images/lingolift-logo.png" type="image/png">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/auth.css">
   <link rel="stylesheet" href="css/supabase-test.css">
 </head>
 <body class="supabase-test-page">
-  <main class="supabase-test-panel">
+  <header class="auth-header">
     <a class="brand" href="index.html" aria-label="Lingolift home">
       <img src="images/lingolift-logo.png" alt="" width="34" height="34">
       <span>lingolift<span class="brand-dot">.</span></span>
     </a>
+    <p>Account access</p>
+  </header>
+  <main class="supabase-test-panel">
     <p class="eyebrow">LOCAL DEVELOPMENT CHECK</p>
     <h1>Supabase <em>connection</em></h1>
     <p class="supabase-test-description">
@@ -31,6 +36,7 @@
     </p>
     <a class="supabase-test-back" href="index.html">← Back to Lingolift</a>
   </main>
+  <script src="js/main.js" defer></script>
   <script type="module" src="js/supabase-connection-test.js"></script>
 </body>
 </html>

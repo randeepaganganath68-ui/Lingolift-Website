@@ -18,13 +18,6 @@ if (signupLink && brandLink) {
     loginLink.textContent = "Log in";
     loginLink.dataset.authLogin = "";
 
-    const logoutButton = document.createElement("button");
-    logoutButton.className = "nav-cta nav-signout";
-    logoutButton.type = "button";
-    logoutButton.textContent = "Log out";
-    logoutButton.dataset.authLogout = "";
-    logoutButton.hidden = true;
-
     const authNavStatus = document.createElement("span");
     authNavStatus.className = "auth-nav-status";
     authNavStatus.setAttribute("role", "status");
@@ -32,12 +25,18 @@ if (signupLink && brandLink) {
     authNavStatus.dataset.authNavStatus = "";
 
     signupLink.after(loginLink);
-    loginLink.after(logoutButton);
-    logoutButton.after(authNavStatus);
-    import("./auth-navigation.js").catch(() => {
-      authNavStatus.textContent = "Account status could not be checked. Sign-in links remain available.";
-    });
+    loginLink.after(authNavStatus);
   }
+}
+
+const authHeader = document.querySelector(".auth-header");
+if (navigation || authHeader) {
+  import("./auth-navigation.js").catch(() => {
+    const authNavStatus = navigation?.querySelector("[data-auth-nav-status]");
+    if (authNavStatus) {
+      authNavStatus.textContent = "Account status could not be checked. Sign-in links remain available.";
+    }
+  });
 }
 
 if (menuButton && navigation) {

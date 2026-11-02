@@ -43,6 +43,8 @@
         <form class="auth-fields" data-auth-form="signup" action="signup.html" method="post" autocomplete="on" aria-describedby="auth-status">
           <fieldset class="auth-fields" disabled>
             <legend class="auth-legend">Account details</legend>
+            <label for="signup-full-name">Full Name</label>
+            <input id="signup-full-name" name="fullName" type="text" autocomplete="name" maxlength="120" required placeholder="Your full name">
             <label for="signup-email">Email address</label>
             <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@example.com">
             <label for="signup-password">Create a password</label>

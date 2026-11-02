@@ -142,6 +142,14 @@ if (authForm) {
     if (authPage === "signup" || authPage === "reset") updatePasswordMatch();
     if (requestInProgress || !formReady || !authForm.reportValidity()) return;
 
+    const fullNameInput = authForm.elements.namedItem("fullName");
+    const fullName = fullNameInput instanceof HTMLInputElement ? fullNameInput.value.trim() : "";
+    if (authPage === "signup" && !fullName) {
+      setStatus("Enter your full name to create an account.", "error");
+      if (fullNameInput instanceof HTMLInputElement) fullNameInput.focus();
+      return;
+    }
+
     const emailInput = authForm.elements.namedItem("email");
     const email = emailInput instanceof HTMLInputElement ? emailInput.value.trim() : "";
     const passwordInput = authForm.elements.namedItem("password");
@@ -160,7 +168,10 @@ if (authForm) {
         const { data, error } = await supabaseClient.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: siteUrl("login.html?confirmed=1") },
+          options: {
+            data: { full_name: fullName },
+            emailRedirectTo: siteUrl("login.html?confirmed=1"),
+          },
         });
         if (error) {
           setStatus(authErrorMessage(error, "signup"), "error");
