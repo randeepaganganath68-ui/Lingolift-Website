@@ -413,6 +413,7 @@ img { display: block; max-width: 100%; }
 .form-submit { width: 100%; margin-top: 19px; cursor: pointer; }
 .form-privacy { margin: 12px 0 0; color: #898f85; font-size: 9px; line-height: 1.6; }
 .form-status { margin-top: 11px; color: var(--green-dark); font-size: 11px; line-height: 1.6; }
+.form-status[data-state="error"] { color: #a33e32; }
 .contact-bottom { padding: 35px 48px; display: flex; align-items: center; justify-content: center; gap: 19px; background: #fff; }
 .contact-bottom p { margin: 0; color: #70776d; font-size: 11px; }
 
@@ -526,6 +527,12 @@ img { display: block; max-width: 100%; }
 
 .reveal { opacity: 0; transform: translateY(17px); transition: opacity .65s ease, transform .65s cubic-bezier(.2,.7,.25,1); }
 .reveal.is-visible { opacity: 1; transform: translateY(0); }
+main > section:not(:first-child),
+main > .feature-detail,
+main > .article-body {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 700px;
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
   .reveal { opacity: 1; transform: none; }

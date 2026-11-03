@@ -12,12 +12,37 @@ if (contactForm instanceof HTMLFormElement) {
 
   const status = document.querySelector("#form-status");
   const submitButton = contactForm.querySelector('button[type="submit"]');
-  if (!(submitButton instanceof HTMLButtonElement)) {
+  const submitLabel = submitButton?.querySelector("[data-submit-label]");
+  const formControls = contactForm.querySelectorAll("input, select, textarea");
+  if (!(status instanceof HTMLElement)) {
+    throw new Error("Contact form is missing its status message.");
+  }
+  if (!(submitButton instanceof HTMLButtonElement) || !(submitLabel instanceof HTMLElement)) {
     throw new Error("Contact form is missing its submit button.");
   }
 
-  contactForm.addEventListener("submit", (event) => {
+  let isSubmitting = false;
+
+  function setStatus(message, state = "info") {
+    status.textContent = message;
+    status.dataset.state = state;
+  }
+
+  function getSubmissionErrorMessage(error) {
+    const statusCode = error?.context?.status;
+    if (statusCode === 429) {
+      return "Please wait a little while before sending another message.";
+    }
+    if (statusCode === 400) {
+      return "Please check your contact details and try again.";
+    }
+    return "We couldn't send your message right now. Please try again later.";
+  }
+
+  contactForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (isSubmitting) return;
+
     let firstInvalidField = null;
     let hasErrors = false;
 
@@ -39,23 +64,77 @@ if (contactForm instanceof HTMLFormElement) {
     });
 
     if (hasErrors) {
-      if (status) status.textContent = "Please check the highlighted fields and try again.";
+      setStatus("Please check the highlighted fields and try again.", "error");
       firstInvalidField?.focus();
       return;
     }
 
-    if (status) {
-      status.textContent = "Your message looks good. This demo form does not send or store messages, so please use an official Lingolift contact channel when one is published.";
+    const honeypot = contactForm.elements.namedItem("website");
+    if (!(honeypot instanceof HTMLInputElement)) {
+      throw new Error("Contact form is missing its spam-protection field.");
+    }
+
+    isSubmitting = true;
+    submitButton.disabled = true;
+    formControls.forEach((control) => {
+      control.disabled = true;
+    });
+    submitLabel.textContent = "Sending...";
+    contactForm.setAttribute("aria-busy", "true");
+    setStatus("Sending your message...", "info");
+
+    try {
+      const response = await fetch("https://lingolift-website.randeepaganganath68.workers.dev/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contactForm.elements.namedItem("name").value,
+          email: contactForm.elements.namedItem("email").value,
+          subject: contactForm.elements.namedItem("subject").value,
+          message: contactForm.elements.namedItem("message").value,
+          website: honeypot.value,
+        }),
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        setStatus(getSubmissionErrorMessage({ context: { status: response.status } }), "error");
+        return;
+      }
+
+      if (!response.ok || data?.ok !== true) {
+        setStatus(getSubmissionErrorMessage({ context: { status: response.status } }), "error");
+        return;
+      }
+
+      contactForm.reset();
+      fields.forEach(({ name, errorId }) => {
+        contactForm.elements.namedItem(name).removeAttribute("aria-invalid");
+        document.getElementById(errorId).textContent = "";
+      });
+      setStatus("Message Sent Successfully! Thank you for contacting Lingolift. We'll get back to you soon.", "success");
+    } catch (error) {
+      setStatus(getSubmissionErrorMessage(error), "error");
+    } finally {
+      isSubmitting = false;
+      submitButton.disabled = false;
+      formControls.forEach((control) => {
+        control.disabled = false;
+      });
+      submitLabel.textContent = "Send Message";
+      contactForm.removeAttribute("aria-busy");
     }
   });
 
-  fields.forEach(({ name }) => {
+  fields.forEach(({ name, errorId }) => {
     const field = contactForm.elements.namedItem(name);
     field?.addEventListener("input", () => {
       field.removeAttribute("aria-invalid");
-      const errorId = fields.find((item) => item.name === name)?.errorId;
-      const error = errorId ? document.getElementById(errorId) : null;
+      const error = document.getElementById(errorId);
       if (error) error.textContent = "";
+      if (status.dataset.state === "error") setStatus("", "info");
     });
   });
 

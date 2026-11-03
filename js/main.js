@@ -2,7 +2,6 @@
 
 // Add the official store URL here once the app listing is live.
 const PLAY_STORE_URL = "";
-
 const menuButton = document.querySelector(".menu-toggle");
 const navigation = document.querySelector(".primary-nav");
 

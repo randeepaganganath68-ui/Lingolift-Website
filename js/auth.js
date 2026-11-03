@@ -61,8 +61,13 @@ if (authForm) {
     history.replaceState(history.state, "", cleanUrl.href);
   }
 
-  const duplicateSignupMessage =
-    "We couldn't complete signup for this email. If you already have an account, log in or use Forgot your password. If not, wait a little while and try again.";
+  const signupResponseMessage =
+    "If registration was accepted, check your inbox for a verification link. If you already have an account, log in or use Forgot your password.";
+
+  function isDuplicateSignupError(error) {
+    const code = error && typeof error.code === "string" ? error.code : "";
+    return code === "email_exists" || code === "user_already_exists";
+  }
 
   function authErrorMessage(error, action) {
     const code = error && typeof error.code === "string" ? error.code : "";
@@ -90,9 +95,6 @@ if (authForm) {
       return action === "signup"
         ? "Signup or verification emails are temporarily rate-limited. Please wait before trying again. If you already have an account, log in or use Forgot your password."
         : "Too many requests were made. Please wait a little while and try again.";
-    }
-    if (action === "signup" && (code === "email_exists" || code === "user_already_exists")) {
-      return duplicateSignupMessage;
     }
     if (action === "signup" && (code === "signup_disabled" || code === "email_provider_disabled")) {
       return "Email signup is temporarily unavailable. Please try again later or contact Lingolift support.";
@@ -173,23 +175,19 @@ if (authForm) {
             emailRedirectTo: siteUrl("login.html?confirmed=1"),
           },
         });
-        if (error) {
+        if (error && !isDuplicateSignupError(error)) {
           setStatus(authErrorMessage(error, "signup"), "error");
-        } else if (Array.isArray(data.user?.identities) && data.user.identities.length === 0) {
-          setStatus(duplicateSignupMessage, "error");
-        } else if (data.session) {
-          const { error: signOutError } = await supabaseClient.auth.signOut();
-          setStatus(
-            signOutError
-              ? "Supabase returned a signed-in session before email verification, and this browser could not clear it. Enable email confirmation in Supabase Auth settings before accepting registrations."
-              : "Supabase returned a signed-in session before email verification. This browser session was cleared. Enable email confirmation in Supabase Auth settings before accepting registrations.",
-            "error",
-          );
         } else {
-          setStatus(
-            "If registration was accepted, check your inbox for a verification link. You must verify your email before logging in.",
-            "success",
-          );
+          if (!error && data.session) {
+            const { error: signOutError } = await supabaseClient.auth.signOut();
+            if (signOutError) {
+              console.error(
+                "Could not clear the signup session before email verification.",
+                signOutError,
+              );
+            }
+          }
+          setStatus(signupResponseMessage, "success");
           authForm.reset();
         }
       } else if (authPage === "login") {

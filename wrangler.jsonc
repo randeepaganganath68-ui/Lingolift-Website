@@ -1,0 +1,15 @@
+{
+  "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
+  "name": "lingolift-website",
+  "main": "supabase/cloudflare-worker.js",
+  "compatibility_date": "2026-11-02",
+  "workers_dev": true,
+  "vars": {
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_LeIqqKFROmdtzxu9HCEHzA_EqpmwGpw"
+  },
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/contact"]
+  }
+}
