@@ -19,6 +19,25 @@
 .auth-fields input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(22, 131, 75, .1); }
 .auth-fields input:disabled { color: #737c71; background: #fbfcfa; opacity: 1; }
 .auth-fields input::placeholder { color: #9a9f97; }
+.signup-avatar { margin: 0 0 17px; }
+.signup-avatar > label { margin-bottom: 7px; }
+.signup-avatar > label span { color: var(--muted); font-weight: 400; }
+.signup-avatar input[type="file"] { min-height: 42px; margin-bottom: 4px; padding: 5px; font-size: 11px; }
+.signup-avatar input[type="file"]::file-selector-button { min-height: 30px; margin-right: 10px; padding: 7px 11px; border: 0; border-radius: 4px; color: #fff; background: var(--green-dark); font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.signup-avatar input[type="file"]::-webkit-file-upload-button { min-height: 30px; margin-right: 10px; padding: 7px 11px; border: 0; border-radius: 4px; color: #fff; background: var(--green-dark); font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.auth-help { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.signup-avatar-editor { margin-top: 12px; display: grid; justify-items: start; gap: 9px; }
+.signup-avatar-editor[hidden] { display: none; }
+.signup-avatar-crop { position: relative; width: min(100%, 260px); aspect-ratio: 1; overflow: hidden; border: 1px solid #dfe6dc; border-radius: 50%; background: var(--green-pale); touch-action: none; cursor: grab; }
+.signup-avatar-crop:active { cursor: grabbing; }
+.signup-avatar-crop img { position: absolute; top: 0; left: 0; max-width: none; max-height: none; user-select: none; pointer-events: none; }
+.signup-avatar-editor > label { margin: 2px 0 0; }
+.signup-avatar input[type="range"] { width: min(100%, 260px); min-height: 24px; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; accent-color: var(--green-dark); }
+.auth-avatar-clear { min-height: 34px; padding: 7px 10px; border: 1px solid #b8cdb5; color: var(--green-dark); background: transparent; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.auth-avatar-clear:hover { background: var(--green-pale); }
+.auth-avatar-status { margin: 6px 0 0; color: #536351; font-size: 10px; line-height: 1.6; }
+.auth-avatar-status[data-state="error"] { color: #792d24; }
+.auth-avatar-status[data-state="success"] { color: var(--green-dark); }
 .auth-submit { width: 100%; margin-top: 5px; cursor: pointer; }
 .auth-submit:disabled { cursor: not-allowed; opacity: .65; }
 .auth-submit:disabled:hover { transform: none; }

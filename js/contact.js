@@ -12,15 +12,33 @@ if (contactForm instanceof HTMLFormElement) {
 
   const status = document.querySelector("#form-status");
   const submitButton = contactForm.querySelector('button[type="submit"]');
-  const submitLabel = submitButton?.querySelector("[data-submit-label]");
-  const formControls = contactForm.querySelectorAll("input, select, textarea");
   if (!(status instanceof HTMLElement)) {
     throw new Error("Contact form is missing its status message.");
   }
-  if (!(submitButton instanceof HTMLButtonElement) || !(submitLabel instanceof HTMLElement)) {
+  if (!(submitButton instanceof HTMLButtonElement)) {
     throw new Error("Contact form is missing its submit button.");
   }
 
+  const messageField = contactForm.elements.namedItem("message");
+  if (!(messageField instanceof HTMLTextAreaElement)) {
+    throw new Error("Contact form is missing its message field.");
+  }
+
+  const recipient = "randeepaganganath68@gmail.com";
+  const emailSubject = "Lingolift Website - Contact Form Message";
+  const linksNotAllowedMessage = "Links are not allowed in messages. Please remove the link and try again.";
+  const knownTopLevelDomains = [
+    "com", "org", "net", "edu", "gov", "mil", "int", "io", "co", "uk", "lk",
+    "us", "ca", "au", "nz", "in", "app", "dev", "info", "biz", "xyz", "ai", "me",
+    "online", "site", "tech", "store", "blog", "cloud", "name", "pro", "mobi",
+    "travel", "museum", "agency", "solutions", "website"
+  ];
+  const domainSeparator = String.raw`(?:\s*\.\s*|\s*(?:\[\s*(?:\.|dot)\s*\]|\(\s*(?:\.|dot)\s*\)|\bdot\b)\s*)`;
+  const domainLabel = String.raw`[a-z0-9](?:[a-z0-9-]*[a-z0-9])?`;
+  const urlPattern = new RegExp(
+    String.raw`(?:^|[^a-z0-9_@])(?:https?\s*:\s*[/\\]\s*[/\\]\s*)?(?:www${domainSeparator})?${domainLabel}(?:${domainSeparator}${domainLabel})*${domainSeparator}(?:${knownTopLevelDomains.join("|")})(?=$|[^a-z0-9-])`,
+    "i"
+  );
   let isSubmitting = false;
 
   function setStatus(message, state = "info") {
@@ -28,18 +46,92 @@ if (contactForm instanceof HTMLFormElement) {
     status.dataset.state = state;
   }
 
-  function getSubmissionErrorMessage(error) {
-    const statusCode = error?.context?.status;
-    if (statusCode === 429) {
-      return "Please wait a little while before sending another message.";
-    }
-    if (statusCode === 400) {
-      return "Please check your contact details and try again.";
-    }
-    return "We couldn't send your message right now. Please try again later.";
+  function containsLink(value) {
+    return urlPattern.test(value);
   }
 
-  contactForm.addEventListener("submit", async (event) => {
+  function updateMessageValidation(showLengthError = false) {
+    const error = document.getElementById("message-error");
+    if (!error) {
+      throw new Error("Contact form is missing its message error message.");
+    }
+
+    const hasLink = containsLink(messageField.value);
+    const isLongEnough = messageField.value.trim().length >= 10;
+    const isWithinLimit = messageField.value.trim().length <= 2000;
+    const isValid = !hasLink && isLongEnough && isWithinLimit;
+
+    if (hasLink) {
+      error.textContent = linksNotAllowedMessage;
+    } else if (showLengthError && !isLongEnough) {
+      error.textContent = "Please enter a message between 10 and 2,000 characters.";
+    } else if (showLengthError && !isWithinLimit) {
+      error.textContent = "Please enter a message between 10 and 2,000 characters.";
+    } else {
+      error.textContent = "";
+    }
+
+    messageField.setAttribute("aria-invalid", String(hasLink || (showLengthError && !isValid)));
+    return isValid;
+  }
+
+  function areOtherFieldsValid() {
+    return fields
+      .filter(({ name }) => name !== "message")
+      .every(({ name, validate }) => {
+        const field = contactForm.elements.namedItem(name);
+        return field && validate(field.value);
+      });
+  }
+
+  function updateSubmitButton() {
+    const messageLength = messageField.value.trim().length;
+    const isMessageValid = !containsLink(messageField.value) &&
+      messageLength >= 10 && messageLength <= 2000;
+    submitButton.disabled = isSubmitting || !isMessageValid || !areOtherFieldsValid();
+  }
+
+  fields.forEach(({ name, errorId, label, validate }) => {
+    const field = contactForm.elements.namedItem(name);
+    const error = document.getElementById(errorId);
+    if (!field || !error) {
+      throw new Error(`Contact form configuration is missing the "${name}" field or its error message.`);
+    }
+
+    const validateField = (showError = false) => {
+      const isValid = validate(field.value);
+      if (showError) {
+        error.textContent = isValid ? "" : `Please enter ${label.toLowerCase()}.`;
+        field.setAttribute("aria-invalid", String(!isValid));
+      } else if (isValid) {
+        error.textContent = "";
+        field.removeAttribute("aria-invalid");
+      }
+      updateSubmitButton();
+      return isValid;
+    };
+
+    field.addEventListener("input", () => {
+      if (name === "message") {
+        updateMessageValidation(true);
+        if (status.dataset.state === "error") setStatus("", "info");
+        updateSubmitButton();
+        return;
+      }
+      validateField(true);
+      if (status.dataset.state === "error") setStatus("", "info");
+    });
+    field.addEventListener("change", () => {
+      if (name === "message") {
+        updateMessageValidation(true);
+        updateSubmitButton();
+        return;
+      }
+      validateField(true);
+    });
+  });
+
+  contactForm.addEventListener("submit", (event) => {
     event.preventDefault();
     if (isSubmitting) return;
 
@@ -53,9 +145,13 @@ if (contactForm instanceof HTMLFormElement) {
         throw new Error(`Contact form configuration is missing the "${name}" field or its error message.`);
       }
 
-      const isValid = validate(field.value);
+      const isValid = name === "message"
+        ? updateMessageValidation(true)
+        : validate(field.value);
       field.setAttribute("aria-invalid", String(!isValid));
-      error.textContent = isValid ? "" : `Please enter ${label.toLowerCase()}.`;
+      if (name !== "message") {
+        error.textContent = isValid ? "" : `Please enter ${label.toLowerCase()}.`;
+      }
 
       if (!isValid) {
         hasErrors = true;
@@ -69,74 +165,30 @@ if (contactForm instanceof HTMLFormElement) {
       return;
     }
 
-    const honeypot = contactForm.elements.namedItem("website");
-    if (!(honeypot instanceof HTMLInputElement)) {
-      throw new Error("Contact form is missing its spam-protection field.");
-    }
-
-    isSubmitting = true;
-    submitButton.disabled = true;
-    formControls.forEach((control) => {
-      control.disabled = true;
-    });
-    submitLabel.textContent = "Sending...";
-    contactForm.setAttribute("aria-busy", "true");
-    setStatus("Sending your message...", "info");
-
+    const name = contactForm.elements.namedItem("name").value;
+    const email = contactForm.elements.namedItem("email").value;
+    const selectedTopic = contactForm.elements.namedItem("subject").selectedOptions[0].textContent.trim();
+    const message = messageField.value;
+    const body = `Name: ${name}\n\nEmail: ${email}\n\nSubject: ${selectedTopic}\n\nMessage:\n${message}`;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient)}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(body)}`;
+    let gmailWindow;
     try {
-      const response = await fetch("https://lingolift-website.randeepaganganath68.workers.dev/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: contactForm.elements.namedItem("name").value,
-          email: contactForm.elements.namedItem("email").value,
-          subject: contactForm.elements.namedItem("subject").value,
-          message: contactForm.elements.namedItem("message").value,
-          website: honeypot.value,
-        }),
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        setStatus(getSubmissionErrorMessage({ context: { status: response.status } }), "error");
-        return;
-      }
-
-      if (!response.ok || data?.ok !== true) {
-        setStatus(getSubmissionErrorMessage({ context: { status: response.status } }), "error");
-        return;
-      }
-
-      contactForm.reset();
-      fields.forEach(({ name, errorId }) => {
-        contactForm.elements.namedItem(name).removeAttribute("aria-invalid");
-        document.getElementById(errorId).textContent = "";
-      });
-      setStatus("Message Sent Successfully! Thank you for contacting Lingolift. We'll get back to you soon.", "success");
-    } catch (error) {
-      setStatus(getSubmissionErrorMessage(error), "error");
-    } finally {
-      isSubmitting = false;
-      submitButton.disabled = false;
-      formControls.forEach((control) => {
-        control.disabled = false;
-      });
-      submitLabel.textContent = "Send Message";
-      contactForm.removeAttribute("aria-busy");
+      gmailWindow = window.open(gmailUrl, "_blank");
+    } catch {
+      gmailWindow = null;
     }
+
+    if (!gmailWindow) {
+      setStatus("Your browser blocked the Gmail window. Allow pop-ups for this site and try again.", "error");
+      updateSubmitButton();
+      return;
+    }
+
+    gmailWindow.opener = null;
+    isSubmitting = true;
+    updateSubmitButton();
+    setStatus("Gmail has opened in a new tab. Review the message and click Send in Gmail to send it.", "success");
   });
 
-  fields.forEach(({ name, errorId }) => {
-    const field = contactForm.elements.namedItem(name);
-    field?.addEventListener("input", () => {
-      field.removeAttribute("aria-invalid");
-      const error = document.getElementById(errorId);
-      if (error) error.textContent = "";
-      if (status.dataset.state === "error") setStatus("", "info");
-    });
-  });
-
-  submitButton.disabled = false;
+  updateSubmitButton();
 }

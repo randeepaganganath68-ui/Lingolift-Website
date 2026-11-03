@@ -6,6 +6,20 @@ const loginLink = navigation?.querySelector("[data-auth-login]");
 const authHeader = document.querySelector(".auth-header");
 const brandLink = document.querySelector(".brand");
 
+function registerNavigationTranslation(element, key, options) {
+  if (window.LingoliftI18n) {
+    window.LingoliftI18n.registerElement(element, key, options);
+  } else {
+    element.dataset.i18n = key;
+    if (options?.attribute) {
+      element.dataset.i18nAttr = Array.isArray(options.attribute)
+        ? options.attribute.join(",")
+        : options.attribute;
+      element.dataset.i18nText = "false";
+    }
+  }
+}
+
 function getUserFullName(user) {
   const fullName = user.user_metadata?.full_name;
   return typeof fullName === "string" ? fullName.trim() : "";
@@ -22,6 +36,10 @@ function addProfileControl(mount, profileUrl, logoutButton) {
   trigger.setAttribute("aria-expanded", "false");
   trigger.setAttribute("aria-haspopup", "true");
   trigger.setAttribute("aria-label", "Open account menu");
+  registerNavigationTranslation(trigger, "account.open-menu", {
+    attribute: "aria-label",
+    text: false,
+  });
 
   const avatar = document.createElement("img");
   avatar.className = "nav-profile-avatar";
@@ -36,6 +54,7 @@ function addProfileControl(mount, profileUrl, logoutButton) {
   const name = document.createElement("span");
   name.className = "nav-profile-name";
   name.textContent = "My account";
+  registerNavigationTranslation(name, "account.menu");
 
   trigger.append(avatar, initials, name);
 
@@ -47,20 +66,24 @@ function addProfileControl(mount, profileUrl, logoutButton) {
   profileLink.className = "nav-profile-link";
   profileLink.href = profileUrl.href;
   profileLink.textContent = "My Profile";
+  registerNavigationTranslation(profileLink, "account.profile");
 
   const settingsLink = document.createElement("a");
   settingsLink.href = `${profileUrl.href}#account-settings`;
   settingsLink.textContent = "Account Settings";
+  registerNavigationTranslation(settingsLink, "account.settings");
 
   logoutButton.classList.remove("nav-cta", "nav-signout");
   logoutButton.classList.add("nav-profile-signout");
   logoutButton.type = "button";
   logoutButton.textContent = "Sign Out";
+  registerNavigationTranslation(logoutButton, "account.sign-out");
   logoutButton.hidden = false;
 
   menu.append(profileLink, settingsLink, logoutButton);
   control.append(trigger, menu);
   mount.append(control);
+  window.LingoliftI18n?.refresh(control);
 
   function closeMenu() {
     menu.hidden = true;
@@ -149,9 +172,11 @@ async function initializeAuthNavigation() {
     const login = document.createElement("a");
     login.href = new URL("login.html", homeUrl).href;
     login.textContent = "Log in";
+    registerNavigationTranslation(login, "nav.login");
     const signup = document.createElement("a");
     signup.href = new URL("signup.html", homeUrl).href;
     signup.textContent = "Sign up";
+    registerNavigationTranslation(signup, "nav.signup");
 
     authNavStatus = document.createElement("span");
     authNavStatus.className = "auth-nav-status";
@@ -159,6 +184,7 @@ async function initializeAuthNavigation() {
     authNavStatus.setAttribute("aria-live", "polite");
     authHeaderLinks.append(login, signup, authNavStatus);
     authHeader.append(authHeaderLinks);
+    window.LingoliftI18n?.refresh(authHeaderLinks);
   }
 
   if (navigation && (!signupLink || !loginLink)) return;

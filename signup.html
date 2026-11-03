@@ -45,6 +45,21 @@
             <legend class="auth-legend">Account details</legend>
             <label for="signup-full-name">Full Name</label>
             <input id="signup-full-name" name="fullName" type="text" autocomplete="name" maxlength="120" required placeholder="Your full name">
+            <div class="signup-avatar">
+              <label for="signup-avatar-file" data-i18n="auth.profile-picture">Profile picture (optional)</label>
+              <input id="signup-avatar-file" type="file" accept="image/jpeg,image/png,image/webp" data-signup-avatar-file>
+              <p class="auth-help" data-i18n="auth.profile-picture-help">JPEG, PNG or WebP. Maximum file size: 2 MB.</p>
+              <div class="signup-avatar-editor" data-signup-avatar-editor hidden>
+                <div class="signup-avatar-crop" data-avatar-crop-viewport>
+                  <img data-avatar-crop-image alt="Profile picture crop preview" draggable="false">
+                </div>
+                <label for="signup-avatar-zoom" data-i18n="auth.adjust-crop">Adjust the crop</label>
+                <input id="signup-avatar-zoom" type="range" min="1" max="3" step="0.01" value="1" data-avatar-crop-zoom>
+                <p class="auth-help" data-i18n="auth.crop-help">Drag the image to position it, then use the slider to zoom.</p>
+                <button class="auth-avatar-clear" type="button" data-avatar-crop-clear data-i18n="auth.remove-selected-picture">Remove selected picture</button>
+              </div>
+              <p class="auth-avatar-status" data-signup-avatar-status role="status" aria-live="polite"></p>
+            </div>
             <label for="signup-email">Email address</label>
             <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="254" required placeholder="you@example.com">
             <label for="signup-password">Create a password</label>

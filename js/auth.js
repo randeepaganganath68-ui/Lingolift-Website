@@ -9,6 +9,8 @@ if (authForm) {
   const submitButton = authForm.querySelector('button[type="submit"]');
   const defaultSubmitLabel = submitButton.textContent.trim();
   let supabaseClient;
+  let signupAvatarTools;
+  let signupAvatarEditor;
   let formReady = false;
   let requestInProgress = false;
   let recoverySessionDetected = false;
@@ -30,6 +32,18 @@ if (authForm) {
     submitButton.textContent = label;
     submitButton.disabled = busy || !formReady;
     authForm.setAttribute("aria-busy", String(busy));
+  }
+
+  async function applyPendingSignupAvatar(user) {
+    if (!signupAvatarTools) return { status: "none" };
+    try {
+      return await signupAvatarTools.applyPendingSignupAvatar(supabaseClient, user);
+    } catch {
+      return {
+        status: "failed",
+        message: "Your signup picture couldn't be saved. You can upload it from profile settings.",
+      };
+    }
   }
 
   function siteUrl(page) {
@@ -116,12 +130,22 @@ if (authForm) {
 
   function addPasswordVisibilityToggles() {
     authForm.querySelectorAll("[data-toggle-password]").forEach((toggle) => {
+      const registerToggleLabel = (key) => {
+        if (window.LingoliftI18n) {
+          window.LingoliftI18n.registerElement(toggle, key);
+        } else {
+          toggle.dataset.i18n = key;
+        }
+      };
+      registerToggleLabel("auth.show");
+
       toggle.addEventListener("click", () => {
         const passwordInput = document.getElementById(toggle.getAttribute("aria-controls"));
         if (!(passwordInput instanceof HTMLInputElement)) return;
         const shouldShow = passwordInput.type === "password";
         passwordInput.type = shouldShow ? "text" : "password";
         toggle.textContent = shouldShow ? "Hide" : "Show";
+        registerToggleLabel(shouldShow ? "auth.hide" : "auth.show");
         toggle.setAttribute("aria-pressed", String(shouldShow));
         toggle.setAttribute("aria-label", `${shouldShow ? "Hide" : "Show"} password`);
       });
@@ -167,6 +191,9 @@ if (authForm) {
     setBusy(true, actionLabels[authPage]);
     try {
       if (authPage === "signup") {
+        const croppedAvatar = signupAvatarEditor?.hasImage
+          ? await signupAvatarEditor.createCroppedAvatar()
+          : null;
         const { data, error } = await supabaseClient.auth.signUp({
           email,
           password,
@@ -178,6 +205,25 @@ if (authForm) {
         if (error && !isDuplicateSignupError(error)) {
           setStatus(authErrorMessage(error, "signup"), "error");
         } else {
+          let avatarMessage = "";
+          let avatarState = "success";
+          if (!error && croppedAvatar) {
+            const savedAvatar = await signupAvatarTools.savePendingSignupAvatar(email, croppedAvatar);
+            if (!savedAvatar.ok) {
+              avatarMessage = "Your account was created, but the picture couldn't be saved in this browser. You can add it later from profile settings.";
+              avatarState = "warning";
+            } else if (data.session?.user) {
+              const avatarResult = await applyPendingSignupAvatar(data.session.user);
+              if (avatarResult.status === "failed") {
+                avatarMessage = avatarResult.message;
+                avatarState = "warning";
+              } else if (avatarResult.status === "uploaded") {
+                avatarMessage = avatarResult.message;
+              }
+            } else {
+              avatarMessage = "Your picture is saved in this browser and will be added after you verify your email and log in here.";
+            }
+          }
           if (!error && data.session) {
             const { error: signOutError } = await supabaseClient.auth.signOut();
             if (signOutError) {
@@ -187,14 +233,25 @@ if (authForm) {
               );
             }
           }
-          setStatus(signupResponseMessage, "success");
+          setStatus(
+            `${signupResponseMessage}${avatarMessage ? ` ${avatarMessage}` : ""}`,
+            avatarState,
+          );
           authForm.reset();
+          signupAvatarEditor?.clear();
         }
       } else if (authPage === "login") {
-        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) {
           setStatus(authErrorMessage(error, "login"), "error");
         } else {
+          const avatarResult = data.user
+            ? await applyPendingSignupAvatar(data.user)
+            : { status: "none" };
+          if (avatarResult.status === "failed") {
+            setStatus(`You are logged in. ${avatarResult.message}`, "warning");
+            return;
+          }
           setStatus("You are logged in. Redirecting to Lingolift…", "success");
           window.setTimeout(() => window.location.replace(siteUrl("index.html")), 400);
         }
@@ -235,6 +292,12 @@ if (authForm) {
     authForm.addEventListener("submit", submitAuthForm);
 
     try {
+      if (authPage === "signup" || authPage === "login") {
+        signupAvatarTools = await import("./signup-avatar.js");
+        if (authPage === "signup") {
+          signupAvatarEditor = signupAvatarTools.createSignupAvatarEditor(authForm);
+        }
+      }
       const { supabase } = await import("./supabase-client.js");
       if (!supabase) {
         setStatus("Account services are not configured. Please contact the Lingolift website owner.", "error");
@@ -269,6 +332,10 @@ if (authForm) {
         return;
       }
 
+      const avatarResult = authPage === "login" && data.session?.user
+        ? await applyPendingSignupAvatar(data.session.user)
+        : { status: "none" };
+
       if (authPage === "reset") {
         if (!data.session || !recoverySessionDetected) {
           setStatus("This reset link is invalid or expired. Request a new password reset email to continue.", "error");
@@ -285,9 +352,17 @@ if (authForm) {
             : data.session
               ? "You have returned from the email verification link with an active session. If your email is not verified, check your inbox."
               : "You have returned from the email verification link. If it was valid, you can now log in.";
-          setStatus(confirmationMessage, "success");
+          const message = avatarResult.status === "failed"
+            ? `${confirmationMessage} ${avatarResult.message}`
+            : avatarResult.status === "uploaded"
+              ? `${confirmationMessage} ${avatarResult.message}`
+              : confirmationMessage;
+          setStatus(message, avatarResult.status === "failed" ? "warning" : "success");
         } else if (authPage === "login" && data.session) {
-          setStatus("You are already logged in. Continue to Lingolift from the home page.", "info");
+          setStatus(
+            avatarResult.message || "You are already logged in. Continue to Lingolift from the home page.",
+            avatarResult.status === "failed" ? "warning" : "info",
+          );
         } else if (authPage === "signup") {
           setStatus("Create an account with your email. Email verification is required before login.", "info");
         } else if (authPage === "forgot") {
