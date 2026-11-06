@@ -14,6 +14,8 @@ if (authForm) {
   let formReady = false;
   let requestInProgress = false;
   let recoverySessionDetected = false;
+  let turnstileWidgetId = null;
+  let turnstileToken = "";
 
   function setStatus(message, state = "info") {
     authStatus.textContent = message;
@@ -163,10 +165,51 @@ if (authForm) {
     );
   }
 
+  async function initializeTurnstile() {
+    if (authPage !== "signup") return;
+
+    const container = authForm.querySelector("[data-turnstile]");
+    if (!container) throw new Error("The signup CAPTCHA widget is missing.");
+
+    if (!window.turnstile) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        script.async = true;
+        script.defer = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("Could not load the CAPTCHA service."));
+        document.head.appendChild(script);
+      });
+    }
+
+    if (!window.turnstile) throw new Error("The CAPTCHA service did not initialize.");
+
+    turnstileWidgetId = window.turnstile.render(container, {
+      sitekey: container.dataset.sitekey,
+      callback: (token) => {
+        turnstileToken = token;
+        setStatus("CAPTCHA verified. You can create your account.", "success");
+      },
+      "expired-callback": () => {
+        turnstileToken = "";
+        setStatus("CAPTCHA expired. Please complete the check again.", "error");
+      },
+      "error-callback": () => {
+        turnstileToken = "";
+        setStatus("CAPTCHA could not load correctly. Refresh the page and try again.", "error");
+      },
+    });
+  }
+
   async function submitAuthForm(event) {
     event.preventDefault();
     if (authPage === "signup" || authPage === "reset") updatePasswordMatch();
     if (requestInProgress || !formReady || !authForm.reportValidity()) return;
+    if (authPage === "signup" && !turnstileToken) {
+      setStatus("Please complete the CAPTCHA check before creating your account.", "error");
+      return;
+    }
 
     const fullNameInput = authForm.elements.namedItem("fullName");
     const fullName = fullNameInput instanceof HTMLInputElement ? fullNameInput.value.trim() : "";
@@ -200,6 +243,7 @@ if (authForm) {
           options: {
             data: { full_name: fullName },
             emailRedirectTo: siteUrl("login.html?confirmed=1"),
+            captchaToken: turnstileToken,
           },
         });
         if (error && !isDuplicateSignupError(error)) {
@@ -280,6 +324,10 @@ if (authForm) {
     } catch {
       setStatus("Lingolift account services could not complete that request. Check your connection and try again.", "error");
     } finally {
+      if (authPage === "signup" && window.turnstile && turnstileWidgetId !== null) {
+        turnstileToken = "";
+        window.turnstile.reset(turnstileWidgetId);
+      }
       setBusy(false);
     }
   }
@@ -304,6 +352,14 @@ if (authForm) {
         return;
       }
       supabaseClient = supabase;
+      if (authPage === "signup") {
+        try {
+          await initializeTurnstile();
+        } catch {
+          setStatus("CAPTCHA could not be initialized. Refresh the page and try again.", "error");
+          return;
+        }
+      }
       const callbackParams = new URLSearchParams(
         `${window.location.search.slice(1)}&${window.location.hash.slice(1)}`,
       );
