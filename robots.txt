@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://lingolift.example/sitemap.xml
+Sitemap: https://lingolift-website.web.app/sitemap.xml
