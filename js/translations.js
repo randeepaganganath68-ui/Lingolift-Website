@@ -1461,9 +1461,64 @@ function registerTranslations(language, entries) {
 }
 
 function registerElement(element, key, options = {}) {
-  8// ... (other functions remain the same)
-}
+  if (!(element instanceof Element)) {
+    throw new TypeError("Element must be a valid DOM element.");
+  }
 
+  if (!key || !Object.hasOwn(english, key)) {
+    throw new RangeError(`Unknown translation key: ${key}`);
+  }
+
+  if (!options || typeof options !== "object" || Array.isArray(options)) {
+    throw new TypeError("Options must be an object.");
+  }
+
+  const attributes = options.attributes ??
+    (element.dataset.i18nAttr || "").split(",").filter(Boolean);
+
+  if (!Array.isArray(attributes)) {
+    throw new TypeError("Options.attributes must be an array.");
+  }
+
+  attributes.forEach((attribute) => {
+    if (element.hasAttribute(attribute)) {
+      addAttribute(element, attribute, key);
+    }
+  });
+
+  if (options.text === false || element.dataset.i18nText === "false") {
+    applyTranslations();
+    return;
+  }
+
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT
+  );
+
+  const textNodes = [];
+  let node = walker.nextNode();
+
+  while (node) {
+    if (!shouldSkipTextNode(node) && node.nodeValue.trim()) {
+      textNodes.push(node);
+    }
+
+    node = walker.nextNode();
+  }
+
+  textNodes.forEach((textNode, index) => {
+    addTextNode(
+      textNode,
+      key,
+      textNode.nodeValue,
+      index,
+      textNodes.length
+    );
+  });
+
+  applyTranslations();
+}
 function refreshTranslations(root = document) {
   registerExplicitTranslations(root);
   applyTranslations();
