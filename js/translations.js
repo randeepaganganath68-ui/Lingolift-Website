@@ -701,7 +701,7 @@ const english = {
   "article.it": "it",
   "article.learn": "learn",
   "article.where-you-are": "where you are.",
-  "article.your-day": "your day",
+  "article.your-day": "your day"
 };
 
 const sinhala = {
@@ -740,7 +740,7 @@ const sinhala = {
   "footer.about": "අප ගැන විස්තර",
   "footer.app-features": "ඇප් එකේ විශේෂාංග",
   "footer.journal": "ලිපි පෙළ",
-  "footer.contact": "ಸම්බන්ධ වන්න",
+  "footer.contact": "සම්බන්ධ වන්න",
   "footer.progress": "පොඩි පොඩි දියුණුවෙන්,",
   "footer.future": "එළියක් තියෙන අනාගතයකට.",
   "footer.copyright": "Lingolift. ඔබේ අනාගත ගමන වෙනුවෙන්මයි.",
@@ -877,7 +877,7 @@ const sinhala = {
   "features.start": "පටන් ගන්න",
   "features.grow": "වැඩෙන්න",
   "features.little": "ටිකෙන් ටික",
-  "features.sentence-parts": "වාක්‍යයක කොටස් තියෙනවා",
+  "features.sentence-parts": "වාක්‍යක කොටස් තියෙනවා",
   "features.subject": "කර්තෘ (Subject)",
   "features.verb": "ක්‍රියා පදය (Verb)",
   "features.grammar": "02 / ව්‍යාකරණ",
@@ -1047,7 +1047,7 @@ const sinhala = {
   "auth.request-another": "වෙනත් ලින්ක් එකක් ඉල්ලන්න",
   "profile.eyebrow": "ඔබේ LINGOLIFT ගිණුම",
   "profile.title": "මගේ",
-  "profile.profile": "ප୍ରොފައިල් එක.",
+  "profile.profile": "ප්‍රොފައިල් එක.",
   "profile.intro": "ඔබේ ගිණුමේ විස්තර අලුතින්ම තියාගන්න.",
   "profile.login": "ඔබේ ගිණුමට ඇතුල් වන්න",
   "profile.details": "ප්‍රොފައިල් විස්තර",
@@ -1219,7 +1219,7 @@ const sinhala = {
   "article.vocabulary-example": "දැන් ඔයාගේම උදාහරණයක් ලියන්න. පෞද්ගලික උදාහරණ වලින් වචන මතක තියාගන්න ලේසියි.",
   "article.vocabulary-review": "වචනයක් එකපාරක් දැකලා මදි. පොඩි විවේකයකින් පසුව ඒක ආපහු මතක් කරගන්න.",
   "article.vocabulary-related": "සමහර වචන එකට එකතු වෙලා එනවා. එහෙම සම්බන්ධ වචන කණ්ඩායම් වශයෙන් ඉගෙන ගන්න.",
-  "article.vocabulary-use": "සරල වාක්‍ය ලියන්න, අවට දේවල් විස්තර කරන්න. අලුත් වචන වලින් අදහස් ප්‍රකාශ කරන්න පුරුදු වෙන්න.",
+  "article.vocabulary-use": "සරල වාක්‍ය ලියන්න, අවට දේවල් විස්තර කරන්න. අලුත් වචන වලින් අදහස් ප්‍රකාශ කරන්න පුළුවන් වෙන්න පුරුදු වෙන්න.",
   "article.vocabulary-app": "ආධුනිකයන්ට ඉංග්‍රීසි වචන දැනුම වැඩිකරගන්න Lingolift ඇප් එක උදව් වෙනවා.",
   "article.vocabulary-app-link": "ඇප් එකේ වචන මාලා විශේෂාංග බලන්න",
   "article.vocabulary-takeaway": "ප්‍රයෝජනවත් වචන තෝරන්න, සන්දර්භය එක්ක ඉගෙන ගන්න, ආපහු පාවිච්චි කරන්න.",
@@ -1265,7 +1265,7 @@ const sinhala = {
   "article.it": "ඒක",
   "article.learn": "ඉගෙන ගන්න",
   "article.where-you-are": "ඔබ ඉන්න තැන ඉඳන්.",
-  "article.your-day": "ඔබේ දවස",
+  "article.your-day": "ඔබේ දවස"
 };
 
 const supportedLanguages = ["en", "si"];
@@ -1462,63 +1462,33 @@ function registerTranslations(language, entries) {
 
 function registerElement(element, key, options = {}) {
   if (!(element instanceof Element)) {
-    throw new TypeError("Element must be a valid DOM element.");
+    throw new TypeError("A translatable DOM element is required.");
+  }
+  if (typeof key !== "string" || !key) {
+    throw new TypeError("A non-empty translation key is required.");
+  }
+  if (!Object.hasOwn(english, key)) {
+    throw new RangeError(`Missing English fallback for translation key: ${key}`);
   }
 
-  if (!key || !Object.hasOwn(english, key)) {
-    throw new RangeError(`Unknown translation key: ${key}`);
+  element.dataset.i18n = key;
+  const attributes = options.attribute
+    ? Array.isArray(options.attribute) ? options.attribute : [options.attribute]
+    : [];
+  if (attributes.length) {
+    element.dataset.i18nAttr = attributes.join(",");
+  } else {
+    delete element.dataset.i18nAttr;
   }
-
-  if (!options || typeof options !== "object" || Array.isArray(options)) {
-    throw new TypeError("Options must be an object.");
+  if (options.text === false || (attributes.length && options.text !== true)) {
+    element.dataset.i18nText = "false";
+  } else {
+    delete element.dataset.i18nText;
   }
-
-  const attributes = options.attributes ??
-    (element.dataset.i18nAttr || "").split(",").filter(Boolean);
-
-  if (!Array.isArray(attributes)) {
-    throw new TypeError("Options.attributes must be an array.");
-  }
-
-  attributes.forEach((attribute) => {
-    if (element.hasAttribute(attribute)) {
-      addAttribute(element, attribute, key);
-    }
-  });
-
-  if (options.text === false || element.dataset.i18nText === "false") {
-    applyTranslations();
-    return;
-  }
-
-  const walker = document.createTreeWalker(
-    element,
-    NodeFilter.SHOW_TEXT
-  );
-
-  const textNodes = [];
-  let node = walker.nextNode();
-
-  while (node) {
-    if (!shouldSkipTextNode(node) && node.nodeValue.trim()) {
-      textNodes.push(node);
-    }
-
-    node = walker.nextNode();
-  }
-
-  textNodes.forEach((textNode, index) => {
-    addTextNode(
-      textNode,
-      key,
-      textNode.nodeValue,
-      index,
-      textNodes.length
-    );
-  });
-
+  registerExplicitTranslations(element);
   applyTranslations();
 }
+
 function refreshTranslations(root = document) {
   registerExplicitTranslations(root);
   applyTranslations();
